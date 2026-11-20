@@ -1,11 +1,10 @@
 # XFold build plan
 
-Updated: 20 November 2026. Repository: `xfold`; future Windows x64 host: `xfold.exe`.
+Updated 20 November 2026. Windows x64 host executable `xfold.exe`.
 
 ## Scope and decisions
 
-Work one phase at a time and stop at its gate. This first run performs **Phase 0 only**.
-There is no app implementation yet. The intended host is one Rust crate with tool
+The host is one Rust crate with tool
 adapters (resolution, arguments, parsing), a job runner (sequencing, cancellation,
 workspaces, publication), and a web layer (HTTP and compact TypeScript/CSS UI).
 Split crates only when a concrete dependency or testing need warrants it.
@@ -13,8 +12,8 @@ Split crates only when a concrete dependency or testing need warrants it.
 Primary output renders DTS:X objects/heights into DTS-HD Master Audio 7.1,
 48 kHz, 24-bit. The second preset encodes TrueHD with spatial metadata. Standalone
 audio precedes MKV extraction and new-file muxing; source files must stay intact.
-One active job, status polling, Windows Job Objects, no-overwrite publication,
-interruption recovery and authenticated loopback access belong to later phases.
+Phase 1 uses Windows Job Objects, state snapshots, and publication that refuses
+to overwrite an existing file. Phase 2 adds authenticated loopback access.
 
 Tools resolve relative to `tools/bin/` in development and the same layout under an
 app-private installed root. Keep the entire MKVToolNix archive tree, including its
@@ -26,11 +25,11 @@ are independent qualification tools only and are not app runtime dependencies.
 | Phase | Status | Exit gate / next work |
 |---|---|---|
 | 0: tools | **Software gate passed on synthetic fixture** | All packages staged; both exports independently decode and identify correctly. Limits below. |
-| 1: audio runner | Not started | Both presets; cancellation, corrupt input, disk shortage, conflicts, restart recovery; no partial final output. |
-| 2: local UI | Not started | Conversion/reload/cancel/retry, keyboard/status accessibility, session and file-scope protections. |
-| 3: MKV input / audio export | Not started | Correct track, preserved DTS:X extraction, both presets, spaces/Unicode, MKA exports. |
-| 4: new MKV output | Not started | Add then replace; payload/structure preservation and feature-length A/V timing. |
-| 5: offline installer | Not started | Distribution review, source/notices closure, clean install/offline/upgrade/uninstall tests. |
+| 1: audio runner | **Passed** | Both presets verified on Windows, including cancellation, corrupt input, disk shortage, conflicts and restart recovery. |
+| 2: local UI | Implemented, manual check deferred | Browser conversion/reload/cancel/retry, keyboard/status accessibility and session protections passed. Native dialogs opened. Interactive selection was deferred. |
+| 3: MKV input / audio export | **Passed** | Explicit track selection, byte-identical DTS:X extraction and both presets as raw or MKA passed on Windows with spaces and Unicode in paths. |
+| 4: new MKV output | **Passed on synthetic fixtures** | Both remux modes preserved payloads, metadata and timing. DTS-HD MA passed the feature-length A/V timing check in both modes. |
+| 5: offline installer | Local candidate | Fresh-directory install, installed workflows, upgrade and uninstall checked on this host. Clean-machine and public distribution gates remain open. |
 
 ## Phase 0 result
 
@@ -59,20 +58,41 @@ Evidence and reproducible commands: [Phase 0 report](evidence/phase0/README.md),
 [bundle inventory](evidence/phase0/bundle.json),
 [licence notes](TOOL_NOTICES.md). Fixture media, tools and caches are ignored.
 
-## Limits and next gate
+## Phase 1 through 5 results
 
-No blocker remains for the **synthetic software gate**. Receiver playback is
+The CLI accepts raw 48 kHz DTS:X and runs one conversion per state directory.
+Each tool starts inside a Windows Job Object. Attempts persist their current stage
+and codec logs, and report interruption on the next status query after a forced
+exit. XFold estimates space from source size, checks again using the actual master
+size, and monitors free space while tools run. It validates the codec profile
+and decodes the export before publishing it by rename on the destination volume.
+Both presets and the failure paths passed the [Windows runner tests](evidence/phase1.md).
+
+The Windows host embeds a TypeScript/CSS interface and opens it on loopback.
+Its per-launch token is passed in the URL fragment and retained in the browser
+tab for reloads. Requests verify Host, token and Origin. Paths are chosen through
+Windows dialogs and retained by the host. The browser API does not take paths.
+The UI shows the current stage, elapsed time, reported encode progress and
+on-demand log tails. See the [browser and API evidence](evidence/phase2.md).
+
+For MKV input, XFold lists audio tracks using MKVToolNix IDs and extracts the
+selected stream without re-encoding. Harletty checks the extracted audio for
+48 kHz DTS:X. For MKA output, XFold muxes the verified raw stream and checks that
+extracting the single output track reproduces the encoded bytes before publication.
+See the [Phase 3 verification](evidence/phase3.md).
+
+Full MKV output retains the selected track's offset and checks the converted
+track and retained timing before publication. Add keeps the original track and
+its default flag. Replace places the exported audio in the original position.
+See [Phase 4 evidence](evidence/phase4.md).
+
+The per-user Windows x64 installer includes the pinned offline bundle, notices
+and source kit. See [Phase 5 evidence](evidence/phase5.md).
+
+Receiver playback is
 unverified. TrueHD Evolution protection is unkeyed (upstream emits a constant
 without a separately supplied key); no key is bundled or invented. This output
 parses and decodes in the tested software, but receiver acceptance is unproven.
-Commercial/dynamic-object DTS:X variants and long programmes are untested.
-Clean-machine dependency minimisation and distribution-source/notice closure
-remain Phase 5 gates; retaining the full portable archive avoids premature pruning.
-
-**Stop here.** On a subsequent named Phase 1 run, first verify the staged inventory,
-then create the single Rust host crate and implement only the audio runner. Use
-`dts --layout 7.1 --bits 24`; qualification's TrueHD arguments are
-`encode --cluster 12 --fold-depth 24`. Preserve diagnostics about unkeyed protection
-and do not promise receiver playback. Harletty `info --json` is parseable; its
-`--log-format json` stderr contains unquoted timestamps in this exact build and
-must be retained as text instead of assumed to be valid JSON.
+Commercial and dynamic-object DTS:X coverage is limited to the profiles tested.
+Interactive Windows file selection, independent clean-machine installation,
+hardware playback and public distribution sign-off remain open.

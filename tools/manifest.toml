@@ -18,6 +18,8 @@ licences = ["Apache-2.0", "dependency notices: see docs/TOOL_NOTICES.md"]
 acquisition = "python scripts/stage_tools.py; exact CLI asset only, not GPL bridge plugins"
 source_url = "https://api.github.com/repos/harletty/harletty-bridge/zipball/9556bcedfd6e71461d49fd3f03fcfdf87351b67f"
 source_sha256 = "a7a38a191ce2239c17e7936a81269c73be9b8373f646f79841bb63aa7ae4c4c2"
+truehd_decoder_commit = "5c8b880405946e7ff1aee884cf9988415fe2c3a9"
+truehd_decoder_source_sha256 = "df2888ef229509e6857a1b7451ffc777781862bc73ca59e9e20a8053ce5c3643"
 
 [tools.harlettizer]
 version = "0.1.0+git.d3eceec"
@@ -50,6 +52,7 @@ companion_files = ["mkvtoolnix/** (complete portable archive, no pruning)"]
 licences = ["GPL-2.0-or-later", "bundled dependency licences under mkvtoolnix/doc/licenses/"]
 acquisition = "python scripts/stage_tools.py; preserve the complete portable archive tree"
 source_url = "https://mkvtoolnix.download/sources/mkvtoolnix-103.0.tar.xz"
+source_sha256 = "d609bc395c409eade05d0a3a5aedd26e09739e232ed03b0f937cf8bd9448c590"
 packaging_status = "Clean-machine companion-file and corresponding-source closure pending"
 
 [build.rust]

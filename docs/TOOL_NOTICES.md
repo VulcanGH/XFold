@@ -1,6 +1,6 @@
 # Exact-bundle notices and rebuild obligations
 
-This is a technical distribution inventory, not a completed release review.
+This is the distribution inventory for the local installer candidate.
 Pins and acquisition commands live in [the manifest](../tools/manifest.toml).
 Keep notices alongside the tools when installing; do not package only EXEs.
 
@@ -23,6 +23,19 @@ libraries are resolved from Rust's matched self-contained directory. GCC/dlltool
 come from verified w64devkit 2.11.0. The executable SHA-256 and every staged file
 hash are recorded in committed evidence. Rebuilding in another path/toolchain
 can change binary bytes; qualify any new binary instead of silently adopting it.
+
+The installer includes Rust runtime and dependency notices, the locked encoder
+dependencies, the Harletty CLI dependency archives and decoder fork, and the
+official MKVToolNix 103.0 source archive. The zlib-compressed installer stub
+comes from the manifest-pinned w64devkit NSIS compiler. See the
+[NSIS license reference](https://nsis.sourceforge.io/License).
+
+Public distribution remains open. The MKVToolNix archive contains Windows
+packaging recipes and bundled project sources but refers to an external MXE
+environment. Its exact official Windows dependency inputs have not been
+established. The v103.0 file `packaging/windows/setup_cross_compilation_env.sh`
+clones the maintainer's MXE `master` branch without a release commit pin.
+The Harletty release rebuild and codec distribution review also remain open.
 
 TrueHD's protection-field key is **not supplied by upstream or this bundle**.
 The qualification output explicitly uses an unkeyed constant. See the staged

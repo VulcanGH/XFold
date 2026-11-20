@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>XFold</title>
+  <link rel="stylesheet" href="/style.css">
+  <script src="/app.js" defer></script>
+</head>
+<body>
+  <header class="topbar">
+    <div class="topbar-inner">
+      <a class="brand" href="/" aria-label="XFold home"><span class="mark" aria-hidden="true">X</span>XFold</a>
+      <button id="theme" type="button" class="quiet" aria-pressed="true">Dark mode</button>
+    </div>
+  </header>
+  <main>
+    <h1>Convert audio</h1>
+    <p class="intro">Export DTS:X as standalone audio or write the converted track to a new MKV.</p>
+    <p id="notice" class="notice" role="alert" hidden></p>
+    <div class="grid">
+      <section class="panel" aria-labelledby="settings-title">
+        <h2 id="settings-title">Conversion</h2>
+        <fieldset id="controls" disabled>
+          <legend class="sr-only">Conversion settings</legend>
+          <div class="file-row">
+            <div class="file">
+              <span class="label">Source</span>
+              <span id="input-path" class="path">Choose a .dts or .mkv file</span>
+            </div>
+            <button type="button" id="input" aria-describedby="input-path">Choose file</button>
+          </div>
+          <div class="field" id="track-field" hidden>
+            <label class="label" for="track">MKV audio track</label>
+            <select id="track" aria-describedby="track-help"></select>
+            <small id="track-help">XFold checks the selected DTS stream for DTS:X before conversion.</small>
+          </div>
+          <fieldset class="presets">
+            <legend>Output preset</legend>
+            <label class="choice">
+              <input id="dts" type="radio" name="preset" value="dts-hd-ma" checked>
+              <span><strong>DTS-HD Master Audio</strong><small>Renders objects and heights into 7.1 at 48 kHz, 24-bit.</small></span>
+            </label>
+            <label class="choice">
+              <input id="truehd" type="radio" name="preset" value="true-hd">
+              <span><strong>TrueHD with spatial metadata</strong><small>Receiver playback is unverified.</small></span>
+            </label>
+          </fieldset>
+          <div class="field">
+            <label class="label" for="format">Output format</label>
+            <select id="format">
+              <option value="raw">Raw audio (.dts or .thd)</option>
+              <option value="mka">Matroska audio (.mka)</option>
+              <option value="add" id="add-mode" disabled>Add converted track to new MKV</option>
+              <option value="replace" id="replace-mode" disabled>Replace selected track in new MKV</option>
+            </select>
+            <small id="mkv-mode-help" hidden></small>
+          </div>
+          <div class="file-row">
+            <div class="file">
+              <span class="label">Destination</span>
+              <span id="output-path" class="path">Choose where to save the export</span>
+            </div>
+            <button type="button" id="output" aria-describedby="output-path">Save as</button>
+          </div>
+        </fieldset>
+        <div class="actions">
+          <button type="button" class="primary" id="convert" disabled>Start conversion</button>
+          <button type="button" id="cancel" hidden>Cancel job</button>
+        </div>
+      </section>
+      <section class="panel job" aria-labelledby="job-title">
+        <h2 id="job-title">Job details</h2>
+        <div class="status-row">
+          <span id="stage" class="stage" data-state="idle">Ready</span>
+          <span id="percent" class="percent" hidden></span>
+          <time id="elapsed">0:00</time>
+        </div>
+        <progress id="progress" max="100" aria-label="Current stage progress" hidden></progress>
+        <p id="detail" class="detail">Choose a source and destination to start.</p>
+        <p id="job-file" class="path"></p>
+        <details id="diagnostics" hidden>
+          <summary>Diagnostics</summary>
+          <pre id="log">Waiting for codec output…</pre>
+        </details>
+      </section>
+    </div>
+    <div id="announcement" class="sr-only" role="status" aria-live="polite" aria-atomic="true"></div>
+  </main>
+</body>
+</html>
