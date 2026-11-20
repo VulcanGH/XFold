@@ -1,0 +1,6 @@
+mkvmerge v103.0 ('The Darkness') 64-bit
+'Z:\repos\XFold\tools\fixtures\export-7.1.dts': Using the demultiplexer for the format 'DTS'.
+'Z:\repos\XFold\tools\fixtures\export-7.1.dts' track 0: Using the output module for the format 'DTS'.
+The file 'Z:\repos\XFold\tools\fixtures\dts-smoke.mka' has been opened for writing.
+Progress: 9%Progress: 100%Progress: 100%The cue entries (the index) are being written...
+Multiplexing took 0 seconds.

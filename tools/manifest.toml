@@ -1,0 +1,66 @@
+schema_version = 1
+architecture = "windows-x86_64"
+development_root = "tools/bin"
+installed_root = "<app-private>/tools/bin"
+qualification = "software gate passed on synthetic DTS:X; receiver and clean-machine checks unverified"
+
+[tools.harletty]
+version = "0.9.0"
+commit = "9556bcedfd6e71461d49fd3f03fcfdf87351b67f"
+url = "https://github.com/harletty/harletty-bridge/releases/download/v0.9.0/harletty-cli-v0.9.0-windows-x86_64.zip"
+sha256 = "0f37246c131506707143f6b355bde47635bcc37f9e9479e2405b5bc4d7b7abdd"
+integrity_url = "https://github.com/harletty/harletty-bridge/releases/expanded_assets/v0.9.0"
+directory = "harletty"
+executables = ["harletty.exe"]
+binary_sha256 = "7a621bc7fe9fb0a1ffab25bef40bb9ce3c69aea126463ac706121d3edb95b1f9"
+companion_files = ["notices/"]
+licences = ["Apache-2.0", "dependency notices: see docs/TOOL_NOTICES.md"]
+acquisition = "python scripts/stage_tools.py; exact CLI asset only, not GPL bridge plugins"
+source_url = "https://api.github.com/repos/harletty/harletty-bridge/zipball/9556bcedfd6e71461d49fd3f03fcfdf87351b67f"
+source_sha256 = "a7a38a191ce2239c17e7936a81269c73be9b8373f646f79841bb63aa7ae4c4c2"
+
+[tools.harlettizer]
+version = "0.1.0+git.d3eceec"
+commit = "d3eceec774780e9b1fb844e33ed01a53f7cf7e39"
+url = "https://api.github.com/repos/harletty/harlettizer/zipball/d3eceec774780e9b1fb844e33ed01a53f7cf7e39"
+sha256 = "827091c33bdb2b3863182be9549e23c38239f368078df50d8ce1af3ecce45425"
+integrity = "Computed source archive SHA-256; immutable upstream commit, no upstream archive digest published"
+directory = "harlettizer"
+executables = ["harlettizer.exe"]
+binary_sha256 = "328fe770dffd64b7f53fa6bea47c58f8f45e93ebb35de9656f485efb567725a6"
+companion_files = ["notices/"]
+licences = ["GPL-3.0-or-later", "Apache-2.0", "BSD-3-Clause", "additional dependencies: see docs/TOOL_NOTICES.md"]
+acquisition = "python scripts/stage_tools.py --build; Rust 1.92.0, GNU Windows x64 target, no optional opus feature"
+build_command = "RUSTFLAGS='-C link-self-contained=yes' cargo build --locked --release --target x86_64-pc-windows-gnu -p hz-cli -p xtask (see scripts/stage_tools.py for local PATH and LIBRARY_PATH)"
+lockfile = "Cargo.lock from the pinned source; archived SHA-256 in docs/evidence/phase0/bundle.json"
+
+[rejected.harlettizer_0_1_0]
+url = "https://github.com/harletty/harlettizer/releases/download/v0.1.0/harlettizer-v0.1.0-windows-x86_64.zip"
+sha256 = "4b715417bd5324262a56f2b8587ca4229bd20f432e8f21cf0639af5ed24d66e9"
+reason = "Exact Windows release has encode but no dts subcommand; not a qualifying bundle"
+
+[tools.mkvtoolnix]
+version = "103.0"
+url = "https://mkvtoolnix.download/windows/releases/103.0/mkvtoolnix-64-bit-103.0.7z"
+sha256 = "01d76dbfdbd5615d9e02f69b0710d1429a902d47a98c8eee33bd884c4fcb3cbf"
+integrity_url = "https://mkvtoolnix.download/windows/releases/103.0/sha256sums.txt"
+directory = "mkvtoolnix"
+executables = ["mkvtoolnix/mkvmerge.exe", "mkvtoolnix/mkvextract.exe"]
+companion_files = ["mkvtoolnix/** (complete portable archive, no pruning)"]
+licences = ["GPL-2.0-or-later", "bundled dependency licences under mkvtoolnix/doc/licenses/"]
+acquisition = "python scripts/stage_tools.py; preserve the complete portable archive tree"
+source_url = "https://mkvtoolnix.download/sources/mkvtoolnix-103.0.tar.xz"
+packaging_status = "Clean-machine companion-file and corresponding-source closure pending"
+
+[build.rust]
+version = "1.92.0"
+target = "x86_64-pc-windows-gnu"
+manifest_url = "https://static.rust-lang.org/dist/channel-rust-1.92.0.toml"
+acquisition = "python scripts/portable_rust.py; component hashes in docs/evidence/phase0/rust-components.json"
+
+[build.w64devkit]
+version = "2.11.0"
+url = "https://github.com/skeeto/w64devkit/releases/download/v2.11.0/w64devkit-x64-2.11.0.7z.exe"
+sha256 = "54c2bb9962e8a30c8270e34c5efc3d5fee579f53087fa7d435b95fbba2af7b2b"
+integrity_url = "https://api.github.com/repos/skeeto/w64devkit/releases/tags/v2.11.0"
+purpose = "Build-only gcc and dlltool, not an app runtime dependency"

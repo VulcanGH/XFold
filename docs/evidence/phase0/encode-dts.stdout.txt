@@ -1,0 +1,4 @@
+  programme    4 objects, 8 bed channels routed to their speakers, rendered to 7.1 on the room's cube
+  encoded      188 frames, 96256 samples: DTS-HD MA, a lossless 24-bit 7.1 with its 5.1 fold embedded, a 2012-byte 5.1 core; lossless layer 3592 kb/s
+  headroom     the render peaking at 0.77 of full scale before the limiter, held under it in 0 blocks of 4096
+  wrote        Z:\repos\XFold\tools\fixtures\export-7.1.dts, a raw elementary stream, 1284668 bytes, 5125 kbit/s

@@ -1,0 +1,22 @@
+[
+  {
+    "component": "rustc",
+    "url": "https://static.rust-lang.org/dist/2025-12-11/rustc-1.92.0-x86_64-pc-windows-gnu.tar.xz",
+    "sha256": "fa0cbdf49f267f316433f054ca99951177827d0d406ddbaba9a0bbdcb093b56d"
+  },
+  {
+    "component": "rust-std",
+    "url": "https://static.rust-lang.org/dist/2025-12-11/rust-std-1.92.0-x86_64-pc-windows-gnu.tar.xz",
+    "sha256": "d4043304ef0e4792fb79a1153cbeca41308aac37cb1af3aa6bc3f0bb6d2276e1"
+  },
+  {
+    "component": "rust-mingw",
+    "url": "https://static.rust-lang.org/dist/2025-12-11/rust-mingw-1.92.0-x86_64-pc-windows-gnu.tar.xz",
+    "sha256": "2487737162915cf6f5addec5e3c472ed89e801bf163c6f6733d87806af44294e"
+  },
+  {
+    "component": "cargo",
+    "url": "https://static.rust-lang.org/dist/2025-12-11/cargo-1.92.0-x86_64-pc-windows-gnu.tar.xz",
+    "sha256": "962e0350346b417719cc36db333424a03e368d602fb411676c901f15487ea29c"
+  }
+]

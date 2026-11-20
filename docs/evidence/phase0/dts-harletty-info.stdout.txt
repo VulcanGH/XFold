@@ -1,0 +1,1 @@
+{"schema":1,"harletty":"0.9.0","build":"9556bce (truehd library 0.7.2) Built: 2026-10-13 18:37:59 UTC","taxonomy":4,"codec":"DTS-HD MA","channels":8,"sample_rate":48000,"spatial":null,"frames_seen":186,"seconds_seen":1.984}

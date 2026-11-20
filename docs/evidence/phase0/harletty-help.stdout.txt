@@ -1,0 +1,59 @@
+Offline decoder for TrueHD, E-AC-3 JOC, DTS and IAMF bitstreams, writing Dolby Atmos master files
+
+Usage: harletty.exe [OPTIONS] <COMMAND>
+
+Commands:
+  decode    Decode the specified TrueHD stream into PCM audio
+  info      Print stream information
+  taxonomy  Print, as JSON, the version of the label taxonomy `info --json` and `decode` emit, and the binary's version
+  help      Print this message or the help of the given subcommand(s)
+
+Options:
+      --loglevel <LOGLEVEL>
+          Set the log level
+
+          Possible values:
+          - off:   Disable logging output
+          - error: No output except errors
+          - warn:  Show warnings and errors
+          - info:  Show info, warnings and errors (default)
+          - debug: Show debug, info, warnings and errors
+          - trace: Show all log messages including trace
+          
+          [default: info]
+
+      --strict
+          Treat warnings as fatal errors (fail on first warning)
+
+      --log-format <LOG_FORMAT>
+          Log output format
+
+          Possible values:
+          - plain: Colorized human-readable text
+          - json:  Structured JSON per log record
+          
+          [default: plain]
+
+      --progress
+          Show progress bars during operations
+
+      --codec <CODEC>
+          Input codec. Use `auto` to detect by sync word (default)
+
+          Possible values:
+          - auto
+          - truehd
+          - eac3
+          - dts
+          - iamf:   A standalone IAMF OBU stream (an IA sequence: its header, the descriptors, then temporal units). Decoded only by a build with the `iamf` feature
+          
+          [default: auto]
+
+      --config <PATH>
+          Local settings file, holding what belongs to this machine rather than to the input: today the key a stream's Evolution protection word is signed with. Defaults to `~/.config/harletty/config.yaml`; see `crate::settings`
+
+  -h, --help
+          Print help (see a summary with '-h')
+
+  -V, --version
+          Print version

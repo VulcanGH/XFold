@@ -1,0 +1,5 @@
+  programme    4 objects, 8 bed channels routed to their speakers, 2 bed channels placed where 7.1.4 has no speaker, rendered to 7.1.4 on the room's cube
+  encoded      188 frames, 96000 samples: DTS-HD MA + DTS:X, the 7.1.4 heights folded into a lossless 24-bit 7.1 at −3 dB, a 2012-byte 5.1 core; lossless layer 4541 kb/s
+  navigation   the extension at most 6000 bytes into a frame of the 8188 the word reaches, 2920 bytes long at most
+  headroom     the composite peaking at 0.65 of full scale before the limiter, held under it in 0 blocks of 4096
+  wrote        Z:\repos\XFold\tools\fixtures\synthetic-dtsx.dts, a raw elementary stream, 1521100 bytes, 6084 kbit/s

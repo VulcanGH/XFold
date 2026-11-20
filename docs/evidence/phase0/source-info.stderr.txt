@@ -1,0 +1,2 @@
+[2026-11-20T11:45:00Z INFO  harletty] 9556bce (truehd library 0.7.2) Built: 2026-10-13 18:37:59 UTC
+[2026-11-20T11:45:00Z INFO  harletty::cli::dts_info] Analyzing DTS stream: Z:\repos\XFold\tools\fixtures\synthetic-dtsx.dts

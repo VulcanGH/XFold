@@ -1,0 +1,4 @@
+* text=auto eol=lf
+# Raw CLI samples retain carriage-return progress and upstream help whitespace.
+docs/evidence/phase0/*.txt -text -whitespace
+docs/evidence/phase0/*.html -text -whitespace

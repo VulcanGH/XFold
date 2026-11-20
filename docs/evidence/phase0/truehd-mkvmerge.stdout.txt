@@ -1,0 +1,6 @@
+mkvmerge v103.0 ('The Darkness') 64-bit
+'Z:\repos\XFold\tools\fixtures\export-spatial.thd': Using the demultiplexer for the format 'TrueHD'.
+'Z:\repos\XFold\tools\fixtures\export-spatial.thd' track 0: Using the output module for the format 'TrueHD'.
+The file 'Z:\repos\XFold\tools\fixtures\truehd-smoke.mka' has been opened for writing.
+Progress: 48%Progress: 100%Progress: 100%The cue entries (the index) are being written...
+Multiplexing took 0 seconds.

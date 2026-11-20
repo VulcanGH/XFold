@@ -1,0 +1,16 @@
+Z:\repos\XFold\tools\fixtures\decoded.atmos
+  programme    11 objects and an LFE, 12 elements
+  encoded      2407 access units, 96256 samples
+  metadata     20 payloads, one every 120 units
+  protection   no key configured, so a constant stands in the field; see docs/encode.md
+  fold         0.0000 mean over the presentations, 0.000 at its worst, as a fraction of the object's own gains
+  weighed by   the plain power, what a meter reads
+  noticed      0.00 % of the element-windows wobble past the blur, 0.00 % of what is playing sitting in one; 0.00°/s of movement the mix never asked for, against 0.00°/s it did — see hz_cluster::motion
+  held by      a dead band: an element stays where it was unless moving pays 25 % of what staying costs
+  steadied by  a hold over 0 blocks behind and 2 ahead
+  floor        -102.6 dBFS at the playback level a dialnorm of -31 implies; 4.09 objects a block under it
+  beds         7 channels besides the LFE, each pinned to its speaker with an element of its own
+  depth        elements rounded to 24 bits, which is every bit the mix made
+  headroom     0 blocks where an element's coherent peak was bounded in the fit, 0 blocks where the limiter brought every element down, the mix peaking at 0.66 of full scale before it
+  drc          from the measured curve, per presentation, restated every 128 units
+  wrote        Z:\repos\XFold\tools\fixtures\export-spatial.thd

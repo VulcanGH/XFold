@@ -1,0 +1,23 @@
+An open encoding engine for immersive audio
+
+Usage: harlettizer.exe [OPTIONS] <COMMAND>
+
+Commands:
+  convert  Convert between a master file set and an ADM BW64 file
+  encode   Encode a programme as a TrueHD stream
+  ac3      Render a programme to 5.1 or stereo and code it as AC-3
+  dts      Render a programme to 5.1, 7.1 or 7.1.4 and write it as DTS-HD Master Audio — for 7.1.4, with the DTS:X extension's standard profile
+  iamf     Render a programme to a 7.1.4 bed and write it as an IAMF sequence
+  help     Print this message or the help of the given subcommand(s)
+
+Options:
+      --config <PATH>
+          Local settings file, for what is this machine's rather than the programme's: the key Evolution frames are signed with.
+          
+          Defaults to `$HARLETTIZER_CONFIG`, then `$XDG_CONFIG_HOME/harlettizer/config.yaml`, then `~/.config/harlettizer/config.yaml`; a default that is absent is no settings, a path given here has to exist.
+
+  -h, --help
+          Print help (see a summary with '-h')
+
+  -V, --version
+          Print version

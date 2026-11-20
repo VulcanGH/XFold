@@ -1,0 +1,10 @@
+/tools/bin/
+/tools/downloads/
+/tools/source/
+/tools/build/
+/tools/toolchain/
+/tools/cargo-home/
+/tools/fixtures/
+/target/
+__pycache__/
+*.partial
