@@ -1,1 +1,0 @@
-wrote Z:\repos\XFold\tools\fixtures\synthetic.atmos (10 bed channels, 4 objects, 14 channels, 96000 frames, tones)

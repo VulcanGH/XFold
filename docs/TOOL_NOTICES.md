@@ -35,8 +35,8 @@ not part of the installed tool bundle.
 The build uses unmodified pinned source and Cargo.lock, release optimisation,
 `x86_64-pc-windows-gnu`, Rust 1.92.0 and `-C link-self-contained=yes`. Runtime
 libraries are resolved from Rust's matched self-contained directory. GCC/dlltool
-come from verified w64devkit 2.11.0. The executable SHA-256 and every staged file
-hash are recorded in committed evidence. Rebuilding in another path/toolchain
+come from verified w64devkit 2.11.0. The reference hashes are recorded in
+`tools/bundle-lock.json`. Rebuilding in another path/toolchain
 can change binary bytes; qualify any new binary instead of silently adopting it.
 
 The installer includes Rust runtime and dependency notices, the locked encoder

@@ -46,11 +46,13 @@ uninstall, close XFold first.
 
 ## Build from source
 
-Follow the [tool staging instructions](docs/evidence/phase0/README.md), then
-build from the repository root and open XFold.
+With Python 3.12 or later, curl, and 7-Zip installed, run these commands from
+the repository root. The first build downloads pinned tool archives and Cargo
+dependencies.
 
 ```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File scripts/cargo-xfold.ps1 build --release --locked --offline --target x86_64-pc-windows-gnu
+python scripts/stage_tools.py --build
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts/cargo-xfold.ps1 build --release --locked --target x86_64-pc-windows-gnu
 $xfold = '.\target\x86_64-pc-windows-gnu\release\xfold.exe'
 & $xfold
 ```
@@ -81,9 +83,7 @@ Use Ctrl+C to cancel. The destination folder must already exist. XFold keeps
 status and codec logs under `%LOCALAPPDATA%\XFold`. Pass
 `--state-dir DIRECTORY` before the subcommand to select a different state folder.
 
-See [the build plan](docs/BUILD_PLAN.md) for phase status and the next gate,
-[the tool manifest](tools/manifest.toml) for pins and layout, and
-[full-MKV test evidence](docs/evidence/phase4.md) for remux behavior and supported timing.
+See [the tool manifest](tools/manifest.toml) for pinned inputs and layout.
 See [the release guide](packaging/RELEASE.md) for installer packaging and update signing.
 
 TrueHD's protection field is unkeyed, and receiver playback remains unverified.

@@ -1,2 +1,0 @@
-Extracting track 0 with the CodecID 'A_TRUEHD' to the file 'Z:\repos\XFold\tools\fixtures\truehd-extracted.thd'. Container format: TrueHD
-Progress: 30%Progress: 65%Progress: 99%Progress: 100%

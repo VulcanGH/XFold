@@ -1,2 +1,0 @@
-Extracting track 0 with the CodecID 'A_DTS' to the file 'Z:\repos\XFold\tools\fixtures\dts-extracted.dts'. Container format: Digital Theater System (DTS)
-Progress: 31%Progress: 65%Progress: 99%Progress: 100%

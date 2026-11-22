@@ -16,7 +16,7 @@ import zipfile
 ROOT = Path(__file__).resolve().parents[1]
 MANIFEST = tomllib.loads((ROOT / "tools/manifest.toml").read_text())
 DOWNLOADS = ROOT / "tools/downloads"
-EVIDENCE = ROOT / "docs/evidence/phase0"
+EVIDENCE = ROOT / "target/tool-evidence"
 
 
 def sha(path):
@@ -104,8 +104,7 @@ def main():
         if not (rust / "cargo.exe").exists():
             if args.offline:
                 raise RuntimeError("Stage local Rust first: python scripts/portable_rust.py")
-            subprocess.run(["python", str(ROOT / "scripts/portable_rust.py"),
-                            "--evidence-dir", str(evidence)], check=True)
+            subprocess.run(["python", str(ROOT / "scripts/portable_rust.py")], check=True)
         w = MANIFEST["build"]["w64devkit"]
         archive = acquire(w["url"], w["sha256"], w["url"].rsplit("/", 1)[1], args.offline)
         if not (ROOT / "tools/build/w64devkit/bin/dlltool.exe").exists():

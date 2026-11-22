@@ -6,14 +6,18 @@ The Rust compiler and other build tools are needed when rebuilding.
 
 ## Build the candidate
 
-Stage and verify the pinned tools and sources using [the tool manifest](../tools/manifest.toml)
-and [Phase 0 staging instructions](../docs/evidence/phase0/README.md).
-Generate the Cargo vendor directory as described in [the installer evidence](../docs/evidence/phase5.md).
-Then build and package from the repository root.
+Use Python 3.12 or later, curl, 7-Zip, FFmpeg, and ffprobe on a Windows x64
+machine. From the repository root, stage the [pinned tools](../tools/manifest.toml),
+qualify the rebuilt encoder, and vendor the locked dependencies.
 
 ```powershell
+python scripts/stage_tools.py --build
+python scripts/qualify_tools.py
+$env:CARGO_HOME = "$PWD\tools\cargo-home"
+$encoder = Get-ChildItem tools/source/harlettizer -Directory | Select-Object -First 1
+& tools/toolchain/bin/cargo.exe vendor --locked --manifest-path (Join-Path $encoder.FullName Cargo.toml) --sync Cargo.toml target/package-vendor > target/package-vendor-config.toml
 powershell -NoProfile -ExecutionPolicy Bypass -File scripts/cargo-xfold.ps1 build --release --locked --offline --target x86_64-pc-windows-gnu
-python scripts/package_xfold.py --offline --exe target/x86_64-pc-windows-gnu/release/xfold.exe
+python scripts/package_xfold.py --exe target/x86_64-pc-windows-gnu/release/xfold.exe --evidence-dir target/tool-evidence
 ```
 
 The output contains `XFold-<version>-windows-x64-setup.exe`,
@@ -33,9 +37,9 @@ uninstall. The draft points to the tested commit. Clear **Create a GitHub
 release draft after verification** for a build and test run. Existing drafts
 and releases are kept intact.
 
-GitHub builds are unsigned until Windows signing is configured. The installer
-and the source kit include the qualification records and the checksum of the
-encoder actually packaged by the run.
+GitHub builds are unsigned until Windows signing is configured. Setup records
+the checksum of the encoder actually packaged. Test logs stay in the runner
+workspace, and the Actions run reports the outcome.
 
 ## In-app updates
 

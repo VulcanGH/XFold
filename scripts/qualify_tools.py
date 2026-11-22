@@ -13,7 +13,7 @@ import subprocess
 import time
 
 ROOT = Path(__file__).resolve().parents[1]
-OUT = ROOT / "docs/evidence/phase0"
+OUT = ROOT / "target/tool-evidence"
 WORK = ROOT / "tools/fixtures"
 HARLETTY = ROOT / "tools/bin/harletty/harletty.exe"
 HZ = ROOT / "tools/bin/harlettizer/harlettizer.exe"

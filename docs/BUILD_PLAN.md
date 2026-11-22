@@ -53,10 +53,9 @@ the difference from 2 s is whole-frame padding in raw DTS. Both streams survived
 MKVToolNix mux/extract byte for byte. Offline restaging/rebuild and hash inventory
 verification passed. All four CLIs launch with only Windows System32 on PATH.
 
-Evidence and reproducible commands: [Phase 0 report](evidence/phase0/README.md),
-[qualification](evidence/phase0/qualification.json),
-[bundle inventory](evidence/phase0/bundle.json),
-[licence notes](TOOL_NOTICES.md). Fixture media, tools and caches are ignored.
+See the [release guide](../packaging/RELEASE.md) for qualification commands,
+the [bundle checksums](../tools/bundle-lock.json) and [tool notices](TOOL_NOTICES.md).
+Fixture media, tools, caches and generated reports stay in ignored directories.
 
 ## Phase 1 through 5 results
 
@@ -66,28 +65,26 @@ and codec logs, and report interruption on the next status query after a forced
 exit. XFold estimates space from source size, checks again using the actual master
 size, and monitors free space while tools run. It validates the codec profile
 and decodes the export before publishing it by rename on the destination volume.
-Both presets and the failure paths passed the [Windows runner tests](evidence/phase1.md).
+Both presets and the failure paths passed Windows runner tests.
 
 The Windows host embeds a TypeScript/CSS interface and opens it on loopback.
 Its per-launch token is passed in the URL fragment and retained in the browser
 tab for reloads. Requests verify Host, token and Origin. Paths are chosen through
 Windows dialogs and retained by the host. The browser API does not take paths.
 The UI shows the current stage, elapsed time, reported encode progress and
-on-demand log tails. See the [browser and API evidence](evidence/phase2.md).
+on-demand log tails.
 
 For MKV input, XFold lists audio tracks using MKVToolNix IDs and extracts the
 selected stream without re-encoding. Harletty checks the extracted audio for
 48 kHz DTS:X. For MKA output, XFold muxes the verified raw stream and checks that
 extracting the single output track reproduces the encoded bytes before publication.
-See the [Phase 3 verification](evidence/phase3.md).
 
 Full MKV output retains the selected track's offset and checks the converted
 track and retained timing before publication. Add keeps the original track and
 its default flag. Replace places the exported audio in the original position.
-See [Phase 4 evidence](evidence/phase4.md).
 
 The per-user Windows x64 installer includes the pinned offline bundle, notices
-and source kit. See [Phase 5 evidence](evidence/phase5.md).
+and source kit.
 
 Receiver playback is
 unverified. TrueHD Evolution protection is unkeyed (upstream emits a constant

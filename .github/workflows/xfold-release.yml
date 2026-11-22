@@ -43,7 +43,7 @@ jobs:
       - name: Stage pinned compiler and runtime tools
         shell: pwsh
         run: |
-          python scripts/portable_rust.py --evidence-dir $env:XFOLD_EVIDENCE
+          python scripts/portable_rust.py
           if ($LASTEXITCODE -ne 0) { throw 'Rust toolchain staging failed' }
           python scripts/stage_tools.py --build --evidence-dir $env:XFOLD_EVIDENCE
           if ($LASTEXITCODE -ne 0) { throw 'Runtime tool staging failed' }

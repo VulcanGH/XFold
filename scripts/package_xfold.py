@@ -135,11 +135,10 @@ def build_source_kit(payload, offline):
         archive.writestr("upstream/SHA256SUMS.txt", "".join(
             f"{sha(path)}  {path.name}\n" for path in (h_source, encoder_source, mkv_source, *git_sources)))
         archive_tree(archive, vendor, "vendor")
-        if (payload / "bundle-evidence").is_dir():
-            archive_tree(archive, payload / "bundle-evidence", "bundle-evidence")
         for name in ("src", "ui", "scripts", "packaging"):
             archive_tree(archive, ROOT / name, f"xfold/{name}")
-        for name in ("Cargo.lock", "Cargo.toml", "build.rs", "LICENSE", "README.md", "tools/manifest.toml", "docs/TOOL_NOTICES.md"):
+        for name in ("Cargo.lock", "Cargo.toml", "build.rs", "LICENSE", "README.md",
+                     "tools/manifest.toml", "tools/bundle-lock.json", "tools/rust-lock.json", "docs/TOOL_NOTICES.md"):
             archive.write(ROOT / name, f"xfold/{name}")
 
 
@@ -174,10 +173,6 @@ def main():
         shutil.copy2(ROOT / "packaging/update.ps1", payload / "update.ps1")
         shutil.copy2(TOOLS / "manifest.toml", payload / "tools/manifest.toml")
         if args.evidence_dir:
-            evidence = payload / "bundle-evidence"
-            evidence.mkdir()
-            for name in ("bundle.json", "qualification.json", "verification.json"):
-                shutil.copy2(args.evidence_dir / name, evidence / name)
             manifest_path = payload / "tools/manifest.toml"
             encoder = MANIFEST["tools"]["harlettizer"]
             original = encoder["binary_sha256"]

@@ -345,5 +345,10 @@
   },
   "harlettizer_lock_sha256": "58cbc73a176263fa37d572a03f5665903a51aa2b9f0838000bc699172bd8de09",
   "harlettizer_commit": "d3eceec774780e9b1fb844e33ed01a53f7cf7e39",
-  "qualification": "See qualification.json; staging is not qualification"
+  "qualified_binary_sha256": {
+    "harletty.exe": "7a621bc7fe9fb0a1ffab25bef40bb9ce3c69aea126463ac706121d3edb95b1f9",
+    "harlettizer.exe": "328fe770dffd64b7f53fa6bea47c58f8f45e93ebb35de9656f485efb567725a6",
+    "mkvmerge.exe": "e66056a12f5b99a43c37f11374a0b08648a1cef7a0c99e0c15786e95abfc5ddd",
+    "mkvextract.exe": "a7e8b7358c743cbd4d5261ff0d09b1ae0538a5825266a31110c00d978ae36403"
+  }
 }
