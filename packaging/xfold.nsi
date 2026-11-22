@@ -110,7 +110,7 @@ Section "XFold"
     MessageBox MB_OK|MB_ICONSTOP "Setup could not install MKVToolNix. Check your connection, or download the official ${MKVTOOLNIX_FILENAME} to the folder containing Setup and retry.$\r$\n$\r$\n$1" /SD IDOK
     SetErrorLevel 14
     ${If} $0 >= 11
-    ${AndIf} $0 <= 13
+    ${AndIf} $0 <= 15
       SetErrorLevel $0
     ${EndIf}
     Quit
