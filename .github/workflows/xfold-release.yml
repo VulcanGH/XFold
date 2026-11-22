@@ -8,6 +8,10 @@ on:
         required: true
         type: boolean
         default: true
+      refresh_draft:
+        description: Refresh the existing unpublished draft for this version
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -93,23 +97,11 @@ jobs:
           python scripts/test_installer.py $setup
           if ($LASTEXITCODE -ne 0) { throw 'Machine-wide install, conversion or uninstall test failed' }
 
-      - name: Create a draft for maintainer review
-        if: inputs.create_draft
+      - name: Prepare the release draft
+        if: inputs.create_draft || inputs.refresh_draft
         shell: pwsh
         env:
           GH_TOKEN: ${{ github.token }}
+          REFRESH_DRAFT: ${{ inputs.refresh_draft }}
         run: |
-          $tag = "v$env:XFOLD_VERSION"
-          $existing = gh release list --repo $env:GITHUB_REPOSITORY --limit 1000 --json tagName --jq '.[].tagName'
-          if ($LASTEXITCODE -ne 0) { throw 'Could not check for an existing GitHub release' }
-          if ($tag -cin $existing) { throw "A draft or release already exists for $tag" }
-          $prefix = "target/release-artifacts/XFold-$env:XFOLD_VERSION"
-          $assets = @(
-            "$prefix-windows-x64-setup.exe", "$prefix-windows-x64-setup.sha256",
-            "$prefix-sources.zip", "$prefix-sources.sha256"
-          )
-          foreach ($file in $assets) {
-            if (-not (Test-Path -LiteralPath $file -PathType Leaf)) { throw "Missing release file: $file" }
-          }
-          gh release create $tag @assets --repo $env:GITHUB_REPOSITORY --target $env:GITHUB_SHA --draft --title "XFold $env:XFOLD_VERSION" --generate-notes
-          if ($LASTEXITCODE -ne 0) { throw 'Draft creation failed. Existing releases are preserved.' }
+          ./scripts/prepare_release_draft.ps1 -Repository $env:GITHUB_REPOSITORY -Version $env:XFOLD_VERSION -Commit $env:GITHUB_SHA -Refresh:($env:REFRESH_DRAFT -eq 'true')

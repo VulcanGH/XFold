@@ -34,8 +34,9 @@ Run **Actions → XFold release draft** on the default branch with the desired
 version in `Cargo.toml`. GitHub builds on Windows x64, qualifies the encoder
 built from the pinned source, then verifies setup, offline conversions, and
 uninstall. The draft points to the tested commit. Clear **Create a GitHub
-release draft after verification** for a build and test run. Existing drafts
-and releases are kept intact.
+release draft after verification** for a build and test run. Select
+**Refresh the existing unpublished draft for this version** to replace its
+assets after the new files pass verification. Publish from the draft after review.
 
 GitHub builds are unsigned until Windows signing is configured. Setup records
 the checksum of the encoder actually packaged. Test logs stay in the runner
