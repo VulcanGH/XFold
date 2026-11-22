@@ -15,36 +15,34 @@ cannot produce those mixes for the full track, XFold stops before saving it.
 
 ## Install and use
 
-Get the Windows x64 installer from [GitHub Releases](https://github.com/VulcanGH/XFold/releases).
+**[Download XFold for Windows x64](https://github.com/VulcanGH/XFold/releases/download/v1.0.0/XFold-1.0.0-windows-x64-setup.exe)** · [Release notes and checksums](https://github.com/VulcanGH/XFold/releases/latest)
 
-Run the installer on Windows 10 version 1809 or later, then open **XFold**
-from the Start menu. Setup requests administrator approval and defaults
-to `C:\Program Files\XFold`. Setup bundles Harletty and Harlettizer and
-downloads and verifies the pinned MKVToolNix build during setup. If the
-download fails, save the official archive beside the installer and run Setup
-again. Conversions run offline, and source files stay in place.
+Run Setup on Windows 10 version 1809 or later and approve the administrator
+prompt. Setup installs to `C:\Program Files\XFold` by default and downloads
+and verifies MKVToolNix once. Conversions work offline after setup.
+
+1. Open **XFold** from the Start menu. The dashboard opens in your default browser.
+2. In **Files & queue**, click **Select file** and choose a `.dts` or `.mkv` file.
+   For MKV input, XFold selects the first DTS track by default. You can choose
+   a different track from **MKV audio track**.
+3. In **Export setup**, choose the output preset and format. XFold suggests
+   saving beside the source file. Use **Save as** to change the destination.
+4. Click **Start conversion** for a single file. For a batch, click **Add to queue**,
+   then use **Add another file** to configure and queue each remaining source.
+   Click **Start queue** to convert them in order.
+
+Click the blue X in the Windows notification area to reopen the dashboard.
+Right-click it and choose **Quit XFold** before upgrading or uninstalling.
+To use a fixed local port, set **Browser port** in **Settings**.
+
+If Setup cannot download MKVToolNix, save the official archive beside the
+installer and run Setup again.
 [MKVToolNix 103.0 for Windows x64](https://mkvtoolnix.download/windows/releases/103.0/mkvtoolnix-64-bit-103.0.7z)
 
-If you have an earlier per-user preview installed, uninstall it from Windows
-Installed apps before installing the machine-wide package. Your XFold
-preferences and exported files are stored separately.
-
-Choose a source in **Files & queue**. For MKV input, check the selected DTS
-track. Choose a preset, format, and destination in **Export setup**. Start the
-conversion immediately or add more files to the queue and start them together.
-XFold converts queued files one at a time.
-
-The blue X in the Windows notification area reopens the dashboard. Hover
-over it for a tooltip, or right-click for **Open XFold** and **Quit XFold**.
-Finish or remove queued jobs before quitting.
-
-Set **Settings → Browser port** to keep a fixed local address across launches,
-or leave it blank to choose an available port automatically. If a fixed port
-is unavailable at launch, XFold uses an automatic port and reports it in Settings.
-
-Signed, update-enabled installations can use **Settings → Check for updates**,
-then **Update and restart** when the workspace is idle. For a manual upgrade or
-uninstall, close XFold first.
+If you have an older per-user preview, uninstall it from Windows **Installed apps**
+before running Setup. Your preferences and exports are stored separately.
+For future updates from the unsigned v1.0.0 release, download and run the new
+installer from GitHub Releases.
 
 ## Build from source
 
@@ -59,11 +57,6 @@ $xfold = '.\target\x86_64-pc-windows-gnu\release\xfold.exe'
 & $xfold
 ```
 
-XFold opens its local conversion screen in your default browser. Use **Select
-file** to open a Windows dialog attached to the active XFold browser window.
-XFold reads the selected file in place and suggests an export beside it.
-For MKV input, check the selected DTS track and choose an output format.
-Use **Save as** to change the destination before starting conversion.
 To open the launcher URL yourself, run
 `& $xfold serve --no-browser`. Treat the printed URL as private to that session.
 
