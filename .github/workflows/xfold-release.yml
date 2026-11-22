@@ -85,6 +85,10 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw 'XFold build failed' }
           python scripts/package_xfold.py --exe target/x86_64-pc-windows-gnu/release/xfold.exe --evidence-dir $env:XFOLD_EVIDENCE
           if ($LASTEXITCODE -ne 0) { throw 'Installer packaging failed' }
+
+      - name: Verify the installed app and offline conversions
+        shell: pwsh
+        run: |
           $setup = "target/release-artifacts/XFold-$env:XFOLD_VERSION-windows-x64-setup.exe"
           python scripts/test_installer.py $setup
           if ($LASTEXITCODE -ne 0) { throw 'Machine-wide install, conversion or uninstall test failed' }

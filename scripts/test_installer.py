@@ -23,7 +23,7 @@ UNINSTALL_KEY = r"Software\Microsoft\Windows\CurrentVersion\Uninstall\XFold"
 def key_exists(name):
     try:
         with winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, name, 0,
-                            winreg.KEY_READ | winreg.KEY_WOW64_32KEY):
+                            winreg.KEY_READ | winreg.KEY_WOW64_64KEY):
             return True
     except FileNotFoundError:
         return False
@@ -108,7 +108,7 @@ def verify(installer, previous):
             obsolete.write_text("test marker")
             assert setup(installer, install_dir) == 0, "setup over existing install failed"
             assert not obsolete.exists()
-            assert key_exists(UNINSTALL_KEY) and key_exists(INSTALL_KEY)
+            assert key_exists(UNINSTALL_KEY) and key_exists(INSTALL_KEY), "missing machine-wide XFold registry entries"
             count = verify_files(install_dir / "app")
             state = work / "user-state"
             launch = web_status(exe, state)

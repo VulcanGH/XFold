@@ -14,8 +14,7 @@ $ErrorActionPreference = 'Stop'
 $versionPattern = '^(0|[1-9]\d{0,4})\.(0|[1-9]\d{0,4})\.(0|[1-9]\d{0,4})\z'
 
 function Assert-Installed {
-    # Setup is a 32-bit NSIS process, even though the installed app is x64.
-    $registry = [Microsoft.Win32.RegistryKey]::OpenBaseKey('LocalMachine', 'Registry32')
+    $registry = [Microsoft.Win32.RegistryKey]::OpenBaseKey('LocalMachine', 'Registry64')
     try {
         $key = $registry.OpenSubKey('Software\XFold')
         if (!$key) { throw 'Install the current XFold Setup to enable in-app updates.' }

@@ -2,7 +2,7 @@ Unicode true
 Name "XFold"
 RequestExecutionLevel admin
 InstallDir "$PROGRAMFILES64\XFold"
-# InstallDirRegKey uses the 32-bit NSIS registry view.
+# InstallDirRegKey uses the native registry view of the x64 NSIS stub.
 InstallDirRegKey HKLM "Software\XFold" "InstallDir"
 SetCompressor /SOLID zlib
 OutFile "${OUTPUT}"
@@ -25,6 +25,7 @@ VIAddVersionKey /LANG=1033 "LegalCopyright" "See included notices"
 !insertmacro MUI_LANGUAGE "English"
 
 Function .onInit
+  SetRegView 64
   ${IfNot} ${IsNativeAMD64}
     MessageBox MB_OK|MB_ICONSTOP "XFold requires Windows x64." /SD IDOK
     SetErrorLevel 2
@@ -35,6 +36,10 @@ Function .onInit
     SetErrorLevel 2
     Quit
   ${EndIf}
+FunctionEnd
+
+Function un.onInit
+  SetRegView 64
 FunctionEnd
 
 Section "XFold"
