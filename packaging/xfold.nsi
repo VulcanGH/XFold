@@ -1,8 +1,9 @@
 Unicode true
 Name "XFold"
-RequestExecutionLevel user
-InstallDir "$LOCALAPPDATA\Programs\XFold"
-InstallDirRegKey HKCU "Software\XFold" "InstallDir"
+RequestExecutionLevel admin
+InstallDir "$PROGRAMFILES64\XFold"
+# InstallDirRegKey uses the 32-bit NSIS registry view.
+InstallDirRegKey HKLM "Software\XFold" "InstallDir"
 SetCompressor /SOLID zlib
 OutFile "${OUTPUT}"
 VIProductVersion "${VERSION}.0"
@@ -11,6 +12,8 @@ VIAddVersionKey /LANG=1033 "FileDescription" "XFold offline installer"
 VIAddVersionKey /LANG=1033 "FileVersion" "${VERSION}"
 VIAddVersionKey /LANG=1033 "LegalCopyright" "See included notices"
 
+!define MUI_ICON "../ui/xfold.ico"
+!define MUI_UNICON "../ui/xfold.ico"
 !include "MUI2.nsh"
 !include "x64.nsh"
 !include "WinVer.nsh"
@@ -35,7 +38,7 @@ Function .onInit
 FunctionEnd
 
 Section "XFold"
-  SetShellVarContext current
+  SetShellVarContext all
   IfFileExists "$INSTDIR\pending\*.*" busy
   IfFileExists "$INSTDIR\previous\*.*" busy
   IfFileExists "$INSTDIR\app\*.*" 0 copy
@@ -63,14 +66,14 @@ Section "XFold"
     CreateDirectory "$SMPROGRAMS\XFold"
     CreateShortCut "$SMPROGRAMS\XFold\XFold.lnk" "$INSTDIR\app\xfold.exe"
     CreateShortCut "$SMPROGRAMS\XFold\Uninstall XFold.lnk" "$INSTDIR\uninstall.exe"
-    WriteRegStr HKCU "Software\XFold" "InstallDir" "$INSTDIR"
-    WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\XFold" "DisplayName" "XFold"
-    WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\XFold" "DisplayVersion" "${VERSION}"
-    WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\XFold" "UninstallString" '"$INSTDIR\uninstall.exe"'
-    WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\XFold" "QuietUninstallString" '"$INSTDIR\uninstall.exe" /S'
-    WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\XFold" "InstallLocation" "$INSTDIR"
-    WriteRegDWORD HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\XFold" "NoModify" 1
-    WriteRegDWORD HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\XFold" "NoRepair" 1
+    WriteRegStr HKLM "Software\XFold" "InstallDir" "$INSTDIR"
+    WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\XFold" "DisplayName" "XFold"
+    WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\XFold" "DisplayVersion" "${VERSION}"
+    WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\XFold" "UninstallString" '"$INSTDIR\uninstall.exe"'
+    WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\XFold" "QuietUninstallString" '"$INSTDIR\uninstall.exe" /S'
+    WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\XFold" "InstallLocation" "$INSTDIR"
+    WriteRegDWORD HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\XFold" "NoModify" 1
+    WriteRegDWORD HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\XFold" "NoRepair" 1
     RMDir /r "$INSTDIR\previous"
     Goto done
 
@@ -88,7 +91,7 @@ Section "XFold"
 SectionEnd
 
 Section "Uninstall"
-  SetShellVarContext current
+  SetShellVarContext all
   IfFileExists "$INSTDIR\app\.xfold-payload" 0 missing
   IfFileExists "$INSTDIR\removing\*.*" missing
   ClearErrors
@@ -99,14 +102,15 @@ Section "Uninstall"
   Rename "$INSTDIR\app" "$INSTDIR\removing"
   IfErrors missing
   RMDir /r "$INSTDIR\removing"
-  Delete "$SMPROGRAMS\XFold\XFold.lnk"
-  Delete "$SMPROGRAMS\XFold\Uninstall XFold.lnk"
-  RMDir "$SMPROGRAMS\XFold"
-  DeleteRegKey HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\XFold"
-  ReadRegStr $0 HKCU "Software\XFold" "InstallDir"
-  StrCmp $0 "$INSTDIR" 0 +2
-  DeleteRegValue HKCU "Software\XFold" "InstallDir"
-  DeleteRegKey /ifempty HKCU "Software\XFold"
+  ReadRegStr $0 HKLM "Software\XFold" "InstallDir"
+  ${If} $0 == "$INSTDIR"
+    Delete "$SMPROGRAMS\XFold\XFold.lnk"
+    Delete "$SMPROGRAMS\XFold\Uninstall XFold.lnk"
+    RMDir "$SMPROGRAMS\XFold"
+    DeleteRegKey HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\XFold"
+    DeleteRegValue HKLM "Software\XFold" "InstallDir"
+    DeleteRegKey /ifempty HKLM "Software\XFold"
+  ${EndIf}
   Delete "$INSTDIR\uninstall.exe"
   RMDir "$INSTDIR"
   Goto done

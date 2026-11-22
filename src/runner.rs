@@ -15,6 +15,7 @@ use crate::{
     windows,
 };
 
+mod caf;
 mod remux;
 
 const MIB: u64 = 1024 * 1024;
@@ -73,17 +74,28 @@ impl Stage {
 #[derive(Debug, Deserialize, Serialize)]
 pub struct Attempt {
     id: String,
-    input: PathBuf,
-    output: PathBuf,
-    preset: Preset,
+    pub input: PathBuf,
+    pub output: PathBuf,
+    pub preset: Preset,
     #[serde(skip_serializing_if = "Option::is_none")]
     track_id: Option<u32>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    mkv_mode: Option<MkvMode>,
+    pub mkv_mode: Option<MkvMode>,
     stage: Stage,
     started_unix_ms: u128,
     updated_unix_ms: u128,
     detail: Option<String>,
+    #[serde(skip)]
+    pub source_metadata: SourceMetadata,
+    #[serde(skip)]
+    pub output_bytes: Option<u64>,
+}
+
+#[derive(Debug, Default)]
+pub struct SourceMetadata {
+    pub title: Option<String>,
+    pub track_name: Option<String>,
+    pub language: Option<String>,
 }
 
 fn now() -> u128 {
@@ -94,22 +106,23 @@ fn now() -> u128 {
 }
 
 impl Attempt {
+    pub fn elapsed_seconds(&self) -> u128 {
+        self.updated_unix_ms.saturating_sub(self.started_unix_ms) / 1_000
+    }
+
     pub fn active(&self) -> bool {
         self.stage.active()
     }
 
     pub fn progress(&self, state: &Path) -> Option<u8> {
-        if self.stage != Stage::Encode {
-            return None;
-        }
-        let log = self.log_path(state)?.join("encode.stderr.txt");
-        tail(&log).ok()?.lines().rev().find_map(|line| {
-            line.strip_prefix("progress ")?
-                .strip_suffix('%')?
-                .parse::<u8>()
-                .ok()
-                .filter(|&percent| percent <= 100)
-        })
+        let (file, prefix) = match self.stage {
+            Stage::Extract => ("extract-source.stdout.txt", "Progress: "),
+            Stage::Decode => ("decode-progress.txt", "progress "),
+            Stage::Encode => ("encode.stderr.txt", "progress "),
+            _ => return None,
+        };
+        let log = self.log_path(state)?.join(file);
+        reported_progress(&tail(&log).ok()?, prefix)
     }
 
     fn log_path(&self, state: &Path) -> Option<PathBuf> {
@@ -261,6 +274,7 @@ fn run_tool(
     logs: &Path,
     name: &str,
     command: Invocation,
+    decode_input_bytes: Option<u64>,
     monitor: impl Fn() -> Result<()>,
 ) -> Result<PathBuf> {
     monitor()?;
@@ -270,6 +284,12 @@ fn run_tool(
     let stderr = File::create_new(&stderr_path)?;
     let child = windows::Child::spawn(&command.exe, &command.args, work, &stdout, &stderr)
         .map_err(|error| format!("Could not launch {}: {error}", command.exe.display()))?;
+    let mut decode_progress = decode_input_bytes
+        .filter(|&bytes| bytes > 0)
+        .and_then(|bytes| {
+            let log = File::create_new(logs.join("decode-progress.txt")).ok()?;
+            Some((bytes, log, None))
+        });
     loop {
         if let Err(error) = monitor() {
             if let Err(termination) = child.terminate() {
@@ -294,6 +314,17 @@ fn run_tool(
             }
             return Ok(stdout_path);
         }
+        if let Some((total, log, previous)) = &mut decode_progress {
+            // Harletty reads DTS incrementally. Its process counters also include unrelated
+            // reads and buffering, so treat this as an estimate and cap it until decoding exits.
+            if let Ok(bytes) = child.bytes_read() {
+                let percent = (u128::from(bytes) * 100 / u128::from(*total)).min(99) as u8;
+                if previous.is_none_or(|last| percent > last) {
+                    let _ = writeln!(log, "progress {percent}%");
+                    *previous = Some(percent);
+                }
+            }
+        }
     }
 }
 
@@ -307,9 +338,14 @@ pub fn list_tracks(state: &Path, input: &Path, cancel: &AtomicBool) -> Result<Ve
         .join(format!("tracks-{}-{}", now(), std::process::id()));
     fs::create_dir(&scratch)?;
     File::create_new(scratch.join("xfold-workspace"))?;
-    let result = run_tool(&scratch, &scratch, "identify", mkv.identify(&input), || {
-        check_cancel(cancel)
-    })
+    let result = run_tool(
+        &scratch,
+        &scratch,
+        "identify",
+        mkv.identify(&input),
+        None,
+        || check_cancel(cancel),
+    )
     .and_then(|report| read_matroska(&report))
     .map(Identification::audio_tracks);
     let cleanup = clean(&scratch);
@@ -377,11 +413,26 @@ impl Job<'_> {
     }
 
     fn step(&mut self, stage: Stage, name: &str, command: Invocation) -> Result<PathBuf> {
+        self.step_with_progress(stage, name, command, None)
+    }
+
+    fn step_with_progress(
+        &mut self,
+        stage: Stage,
+        name: &str,
+        command: Invocation,
+        decode_input_bytes: Option<u64>,
+    ) -> Result<PathBuf> {
         self.check_cancel()?;
         self.attempt.set(self.state, stage, None)?;
-        run_tool(&self.work, &self.logs, name, command, || {
-            self.check_cancel().and_then(|()| self.space(RESERVE))
-        })
+        run_tool(
+            &self.work,
+            &self.logs,
+            name,
+            command,
+            decode_input_bytes,
+            || self.check_cancel().and_then(|()| self.space(RESERVE)),
+        )
         .map_err(|error| format!("{error}\nLogs: {}", self.logs.display()).into())
     }
 
@@ -402,16 +453,31 @@ impl Job<'_> {
             )
             .into());
         }
+        self.attempt.source_metadata = SourceMetadata {
+            title: identified.title().map(str::to_owned),
+            track_name: track.properties.track_name.clone(),
+            language: track.properties.language_tag().map(str::to_owned),
+        };
         Ok(identified)
     }
 
-    fn mux_audio(&mut self, mkv: &MkvTools, raw: &Path, preset: Preset) -> Result<PathBuf> {
+    fn mux_audio(
+        &mut self,
+        mkv: &MkvTools,
+        raw: &Path,
+        preset: Preset,
+        language: Option<&str>,
+    ) -> Result<PathBuf> {
         // The raw stream stays on disk while writing the MKA and extracting its
         // track for byte-for-byte verification before publication.
         let raw_size = fs::metadata(raw)?.len();
         self.space(RESERVE.saturating_add(raw_size.saturating_mul(3)))?;
         let container = self.work.join("export.mka");
-        self.step(Stage::Mux, "mux-audio", mkv.mux_audio(raw, &container))?;
+        self.step(
+            Stage::Mux,
+            "mux-audio",
+            mkv.mux_audio(raw, &container, language),
+        )?;
         let report = self.step(Stage::Verify, "identify-export", mkv.identify(&container))?;
         let identified = read_matroska(&report)?;
         let codec_id = match preset {
@@ -480,10 +546,13 @@ impl Job<'_> {
         };
         // Estimate from the compressed audio size, excluding any MKV video or
         // other tracks. Use actual master bytes after decoding.
-        if track_id.is_some() {
+        let audio_size = if track_id.is_some() {
             let audio_size = fs::metadata(&audio_input)?.len();
             self.space(RESERVE.saturating_add(audio_size.saturating_mul(8)))?;
-        }
+            audio_size
+        } else {
+            source_size
+        };
         let info = self.step(
             Stage::Inspect,
             "inspect",
@@ -497,10 +566,11 @@ impl Job<'_> {
         }
         let master_base = self.work.join("master");
         let master = self.work.join("master.atmos");
-        self.step(
+        self.step_with_progress(
             Stage::Decode,
             "decode",
             tools.decode(&audio_input, &master_base, &config),
+            Some(audio_size),
         )?;
         let mut master_bytes = 0_u64;
         for name in [
@@ -515,12 +585,26 @@ impl Job<'_> {
             master_bytes = master_bytes.saturating_add(size);
         }
         self.space(RESERVE.saturating_add(master_bytes.saturating_mul(2)))?;
+        let truehd_input_samples = if preset == Preset::TrueHd {
+            self.attempt.set(self.state, Stage::Encode, None)?;
+            Some(caf::reserve_headroom(
+                &self.work.join("master.atmos.audio"),
+                self.cancel,
+            )?)
+        } else {
+            None
+        };
         let partial = self.work.join(format!("export.{}", preset.extension()));
-        self.step(
+        let encode_report = self.step(
             Stage::Encode,
             "encode",
             tools.encode(preset, &master, &partial, &config),
         )?;
+        if truehd_input_samples.is_some()
+            && !tools::has_complete_truehd_presentations(&fs::read_to_string(encode_report)?)
+        {
+            return Err("The encoder could not build correctly routed TrueHD playback mixes for the entire track. Try the DTS-HD MA preset.".into());
+        }
         let exported = OpenOptions::new().write(true).open(&partial)?;
         if exported.metadata()?.len() == 0 {
             return Err("Encoder produced an empty file.".into());
@@ -547,17 +631,30 @@ impl Job<'_> {
             "verify-decode",
             tools.verify_decode(&partial, &self.work.join("verified"), &config, codec),
         )?;
+        if let Some(expected) = truehd_input_samples {
+            let log = tail(&self.logs.join("verify-decode.stderr.txt"))?;
+            let decoded = tools::truehd_decoded_samples(&log)
+                .ok_or("The TrueHD decoder did not report a sample count.")?;
+            // Each TrueHD access unit holds 40 samples at 48 kHz.
+            if !(expected..=expected.saturating_add(39)).contains(&decoded) {
+                return Err(format!("TrueHD duration changed during conversion ({expected} source samples, {decoded} decoded samples).").into());
+            }
+        }
         let partial = if let (Some(mkv), Some(plan)) = (&mkv, remux) {
             self.remux(mkv, &input, &partial, plan, preset)?
         } else if let Some(mkv) = mkv.as_ref().filter(|_| mka) {
-            self.mux_audio(mkv, &partial, preset)?
+            let language = self.attempt.source_metadata.language.clone();
+            self.mux_audio(mkv, &partial, preset, language.as_deref())?
         } else {
             partial
         };
-        OpenOptions::new().write(true).open(&partial)?.sync_all()?;
+        let exported = OpenOptions::new().write(true).open(&partial)?;
+        exported.sync_all()?;
+        self.attempt.output_bytes = exported.metadata().ok().map(|metadata| metadata.len());
+        drop(exported);
         self.check_cancel()?;
         let warning = matches!(preset, Preset::TrueHd).then(|| {
-            "TrueHD spatial protection is unkeyed. Receiver playback is unverified.".to_string()
+            "TrueHD playback mixes use 12 dB of headroom. Spatial protection is unkeyed. Receiver playback is unverified.".to_string()
         });
         self.attempt.set(self.state, Stage::Publishing, None)?;
         self.check_cancel()?;
@@ -581,6 +678,17 @@ fn require_space(available: u64, minimum: u64) -> Result<()> {
                            (minimum - available).div_ceil(MIB)).into());
     }
     Ok(())
+}
+
+fn reported_progress(text: &str, prefix: &str) -> Option<u8> {
+    text.rsplit(['\r', '\n']).find_map(|line| {
+        line.trim()
+            .strip_prefix(prefix)?
+            .strip_suffix('%')?
+            .parse::<u8>()
+            .ok()
+            .filter(|&percent| percent <= 100)
+    })
 }
 
 fn tail(path: &Path) -> io::Result<String> {
@@ -696,6 +804,8 @@ pub fn convert(
         started_unix_ms: timestamp,
         updated_unix_ms: timestamp,
         detail: None,
+        source_metadata: SourceMetadata::default(),
+        output_bytes: None,
     };
     let work = attempt.workspace()?;
     let logs = state.join("logs").join(&attempt.id);
@@ -740,6 +850,22 @@ pub fn convert(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn reported_progress_uses_latest_complete_update() {
+        assert_eq!(
+            reported_progress(
+                "Extracting track\nProgress: 0%\rProgress: 61%\rProgress: 6",
+                "Progress: "
+            ),
+            Some(61)
+        );
+        assert_eq!(
+            reported_progress("progress 42%\nprogress 103%", "progress "),
+            Some(42)
+        );
+        assert_eq!(reported_progress("Extracting track\n", "Progress: "), None);
+    }
 
     #[test]
     fn disk_shortage_reports_required_bytes() {

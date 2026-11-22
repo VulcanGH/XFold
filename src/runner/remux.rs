@@ -113,11 +113,7 @@ impl Job<'_> {
         } = plan;
         let replacing = matches!(mode, MkvMode::Replace);
         let selected = &report.tracks[index];
-        let new_index = if replacing {
-            index
-        } else {
-            report.tracks.len()
-        };
+        let new_index = mode.converted_index(&report.tracks, index);
         let space = fs::metadata(source)?
             .len()
             .saturating_add(fs::metadata(raw)?.len().saturating_mul(3));
@@ -131,7 +127,7 @@ impl Job<'_> {
                 raw,
                 &container,
                 &report.tracks,
-                selected,
+                index,
                 mode,
                 offset_ms,
                 scale,
@@ -168,8 +164,7 @@ impl Job<'_> {
                     return selected.properties.flag_value(flag)
                         != converted.properties.flag_value(flag);
                 }
-                let expected = selected.properties.flag(flag, default)
-                    && (replacing || (flag != "default_track" && flag != "forced_track"));
+                let expected = mode.converted_flag(&selected.properties, flag, default);
                 converted.properties.flag(flag, default) != expected
             })
         {
@@ -186,9 +181,13 @@ impl Job<'_> {
             if replacing && i == index {
                 continue;
             }
-            let output_track = &output.tracks[i];
-            if !retained_track(source_track, output_track)
-                || tag_count(&report, source_track.id) != tag_count(&output, output_track.id)
+            let output_index = i + usize::from(!replacing && i >= new_index);
+            let output_track = &output.tracks[output_index];
+            if !retained_track(
+                source_track,
+                output_track,
+                !replacing && source_track.is_audio(),
+            ) || tag_count(&report, source_track.id) != tag_count(&output, output_track.id)
             {
                 return Err(
                     format!("Retained track {} changed during muxing.", source_track.id).into(),
@@ -196,7 +195,7 @@ impl Job<'_> {
             }
             if !same_timestamps(
                 &timestamps[i].1,
-                &output_timestamps[i].1,
+                &output_timestamps[output_index].1,
                 scale,
                 self.cancel,
             )? {
@@ -239,7 +238,7 @@ fn timestamp_paths(work: &Path, report: &Identification, prefix: &str) -> Vec<(u
         .collect()
 }
 
-fn retained_track(source: &Track, output: &Track) -> bool {
+fn retained_track(source: &Track, output: &Track, clear_default: bool) -> bool {
     let (a, b) = (&source.properties, &output.properties);
     source.kind == output.kind
         && a.codec_id == b.codec_id
@@ -251,7 +250,8 @@ fn retained_track(source: &Track, output: &Track) -> bool {
             if flag.starts_with("flag_") {
                 a.flag_value(flag) == b.flag_value(flag)
             } else {
-                a.flag(flag, default) == b.flag(flag, default)
+                let expected = a.flag(flag, default) && !(clear_default && flag == "default_track");
+                expected == b.flag(flag, default)
             }
         })
 }

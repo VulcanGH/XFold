@@ -103,7 +103,12 @@ def prepare_harletty(notices, offline):
 def build_source_kit(payload, offline):
     source_dir = payload / "source"
     source_dir.mkdir()
-    crates, git_sources = prepare_harletty(payload / "tools/bin/harletty/notices/dependencies", offline)
+    harletty_notices = payload / "tools/bin/harletty/notices/dependencies"
+    crates, git_sources = prepare_harletty(harletty_notices, offline)
+    supplement = ROOT / "packaging/notices/indicatif-log-bridge-0.2.3.txt"
+    notice_dir = harletty_notices / supplement.stem
+    notice_dir.mkdir(exist_ok=True)
+    shutil.copy2(supplement, notice_dir / "NOTICE.txt")
     projects = MANIFEST["tools"]
     mkv = projects["mkvtoolnix"]
     mkv_source = acquire(mkv["source_url"], mkv["source_sha256"], "mkvtoolnix-103.0.tar.xz", offline)
@@ -132,7 +137,7 @@ def build_source_kit(payload, offline):
         archive_tree(archive, vendor, "vendor")
         for name in ("src", "ui", "scripts", "packaging"):
             archive_tree(archive, ROOT / name, f"xfold/{name}")
-        for name in ("Cargo.lock", "Cargo.toml", "README.md", "tools/manifest.toml", "docs/TOOL_NOTICES.md"):
+        for name in ("Cargo.lock", "Cargo.toml", "build.rs", "LICENSE", "README.md", "tools/manifest.toml", "docs/TOOL_NOTICES.md"):
             archive.write(ROOT / name, f"xfold/{name}")
 
 
@@ -152,14 +157,19 @@ def main():
     output_dir = args.output_dir.resolve()
     output_dir.mkdir(parents=True, exist_ok=True)
     output = output_dir / f"XFold-{version}-windows-x64-setup.exe"
+    sources = output_dir / f"XFold-{version}-sources.zip"
     temporary_output = output.with_suffix(".pending.exe")
     with tempfile.TemporaryDirectory(dir=TARGET, prefix="installer-") as scratch:
         payload = Path(scratch) / "payload"
-        shutil.copytree(TOOLS / "bin", payload / "tools/bin")
+        for tool in MANIFEST["tools"].values():
+            directory = tool["directory"]
+            shutil.copytree(TOOLS / "bin" / directory, payload / "tools/bin" / directory)
         shutil.copy2(args.exe, payload / "xfold.exe")
+        shutil.copy2(ROOT / "packaging/update.ps1", payload / "update.ps1")
         shutil.copy2(TOOLS / "manifest.toml", payload / "tools/manifest.toml")
         shutil.copy2(ROOT / "docs/TOOL_NOTICES.md", payload / "THIRD-PARTY-NOTICES.md")
         shutil.copy2(ROOT / "README.md", payload / "README.md")
+        shutil.copy2(ROOT / "LICENSE", payload / "LICENSE")
         runtime = TOOLS / "toolchain/share/doc/rust"
         shutil.copytree(runtime / "licenses", payload / "notices/rust/licenses")
         for name in ("COPYRIGHT.html", "COPYRIGHT-library.html"):
@@ -178,9 +188,14 @@ def main():
         (payload / "bundle-sha256.json").write_text(json.dumps(hashes, indent=2) + "\n")
         subprocess.run([str(compiler), "-V2", f"-DVERSION={version}", f"-DPAYLOAD={payload}",
                         f"-DOUTPUT={temporary_output}", str(ROOT / "packaging/xfold.nsi")], check=True)
+        source_copy = sources.with_suffix(".pending.zip")
+        shutil.copyfile(payload / "source/xfold-sources.zip", source_copy)
+        source_copy.replace(sources)
     temporary_output.replace(output)
-    output.with_suffix(".sha256").write_text(f"{sha(output)}  {output.name}\n")
+    for artifact in (output, sources):
+        artifact.with_suffix(".sha256").write_text(f"{sha(artifact)}  {artifact.name}\n", encoding="ascii")
     print(output, flush=True)
+    print(sources, flush=True)
 
 
 if __name__ == "__main__":

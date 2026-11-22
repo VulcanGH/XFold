@@ -1,5 +1,6 @@
 """Exercise offline setup and uninstall in a fresh directory on this Windows host."""
 import argparse
+import ctypes
 import hashlib
 import http.client
 import json
@@ -21,7 +22,8 @@ UNINSTALL_KEY = r"Software\Microsoft\Windows\CurrentVersion\Uninstall\XFold"
 
 def key_exists(name):
     try:
-        with winreg.OpenKey(winreg.HKEY_CURRENT_USER, name):
+        with winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, name, 0,
+                            winreg.KEY_READ | winreg.KEY_WOW64_32KEY):
             return True
     except FileNotFoundError:
         return False
@@ -88,9 +90,11 @@ def uninstall(install_dir):
 
 
 def verify(installer, previous):
+    if not ctypes.windll.shell32.IsUserAnAdmin():
+        raise RuntimeError("Run the machine-wide installer test from an elevated terminal.")
     if key_exists(UNINSTALL_KEY) or key_exists(INSTALL_KEY):
         raise RuntimeError("An XFold installation or registration already exists for this account.")
-    with tempfile.TemporaryDirectory(prefix="setup-test-", dir=ROOT / "target") as temporary:
+    with tempfile.TemporaryDirectory(prefix="xfold-setup-test-") as temporary:
         work = Path(temporary)
         install_dir = work / "XFold x64"
         assert setup(previous or installer, install_dir) == 0, "fresh setup failed"
@@ -120,6 +124,7 @@ def verify(installer, previous):
             standalone = work / "standalone"
             standalone.mkdir()
             test_mkv_audio.verify_cli(standalone, test_mkv_audio.make_fixture(standalone))
+            test_mkv_audio.verify_legacy_language(standalone)
             remux = work / "full"
             remux.mkdir()
             source, _ = test_full_mkv.fixture(remux, 0)
@@ -140,6 +145,6 @@ def verify(installer, previous):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("installer", type=Path)
-    parser.add_argument("--previous", type=Path)
+    parser.add_argument("--previous", type=Path, help="Previous machine-wide installer")
     args = parser.parse_args()
     verify(args.installer.resolve(), args.previous.resolve() if args.previous else None)

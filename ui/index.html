@@ -4,37 +4,61 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>XFold</title>
+  <link rel="icon" href="/favicon.ico">
   <link rel="stylesheet" href="/style.css">
   <script src="/app.js" defer></script>
 </head>
 <body>
   <header class="topbar">
     <div class="topbar-inner">
-      <a class="brand" href="/" aria-label="XFold home"><span class="mark" aria-hidden="true">X</span>XFold</a>
-      <button id="theme" type="button" class="quiet" aria-pressed="true">Dark mode</button>
+      <a class="brand" href="#convert" aria-label="XFold home"><span class="mark" aria-hidden="true">X</span><span>XFold</span><span id="version" class="version" hidden></span></a>
+      <nav class="header-actions" aria-label="Main navigation">
+        <a id="convert-link" href="#convert" aria-current="page">Convert</a>
+        <a id="settings-link" href="#settings">Settings</a>
+      </nav>
+      <button id="theme" type="button" class="quiet" disabled>Light mode</button>
     </div>
   </header>
   <main>
-    <h1>Convert audio</h1>
-    <p class="intro">Export DTS:X as standalone audio or write the converted track to a new MKV.</p>
     <p id="notice" class="notice" role="alert" hidden></p>
-    <div class="grid">
-      <section class="panel" aria-labelledby="settings-title">
-        <h2 id="settings-title">Conversion</h2>
-        <fieldset id="controls" disabled>
-          <legend class="sr-only">Conversion settings</legend>
-          <div class="file-row">
-            <div class="file">
-              <span class="label">Source</span>
-              <span id="input-path" class="path">Choose a .dts or .mkv file</span>
-            </div>
-            <button type="button" id="input" aria-describedby="input-path">Choose file</button>
+    <div id="convert-page">
+    <header class="page-header">
+      <div class="section-bar"><span>Conversion workspace</span><span>Local processing</span></div>
+      <div class="intro-band">
+        <div>
+          <h1 id="convert-title" tabindex="-1">Convert <span>DTS:X</span></h1>
+          <p class="intro">Export DTS-HD Master Audio or TrueHD as standalone audio, or write the converted track to a new MKV.</p>
+        </div>
+      </div>
+    </header>
+    <div class="convert-grid">
+      <section class="panel" aria-labelledby="source-title">
+        <h2 id="source-title">Files &amp; queue</h2>
+        <div class="file-row">
+          <div class="file">
+            <span class="label">Source <span id="source-number" class="queue-number" hidden></span></span>
+            <span id="input-path" class="path">Choose a .dts or .mkv file</span>
           </div>
+          <button type="button" id="input" aria-describedby="input-path" disabled>Select file</button>
+        </div>
+        <fieldset id="source-controls" disabled>
+          <legend class="sr-only">Source settings</legend>
           <div class="field" id="track-field" hidden>
             <label class="label" for="track">MKV audio track</label>
             <select id="track" aria-describedby="track-help"></select>
-            <small id="track-help">XFold checks the selected DTS stream for DTS:X before conversion.</small>
+            <small id="track-help">XFold selects the first DTS track by default and checks it for DTS:X when you start.</small>
           </div>
+        </fieldset>
+        <section id="queue" aria-labelledby="queue-title">
+          <h3 id="queue-title">Queue</h3>
+          <p id="queue-empty" class="detail">Select a file and choose Add to queue.</p>
+          <ol id="queue-items" class="queue-items"></ol>
+        </section>
+      </section>
+      <section class="panel export-panel" aria-labelledby="export-title">
+        <h2 id="export-title">Export setup</h2>
+        <fieldset id="controls" disabled>
+          <legend class="sr-only">Export options</legend>
           <fieldset class="presets">
             <legend>Output preset</legend>
             <label class="choice">
@@ -48,7 +72,7 @@
           </fieldset>
           <div class="field">
             <label class="label" for="format">Output format</label>
-            <select id="format">
+            <select id="format" aria-describedby="mkv-mode-help">
               <option value="raw">Raw audio (.dts or .thd)</option>
               <option value="mka">Matroska audio (.mka)</option>
               <option value="add" id="add-mode" disabled>Add converted track to new MKV</option>
@@ -59,32 +83,114 @@
           <div class="file-row">
             <div class="file">
               <span class="label">Destination</span>
-              <span id="output-path" class="path">Choose where to save the export</span>
+              <span id="output-path" class="path">Select a source to suggest a destination</span>
             </div>
-            <button type="button" id="output" aria-describedby="output-path">Save as</button>
+            <button type="button" id="output" aria-describedby="output-path" disabled>Save as</button>
           </div>
         </fieldset>
-        <div class="actions">
+        <div id="export-summary" class="export-summary" hidden>
+          <strong>Export summary</strong>
+          <p id="summary-output"></p>
+          <p id="summary-language"></p>
+        </div>
+        <div class="actions export-actions">
+          <button type="button" id="enqueue" disabled>Add to queue</button>
           <button type="button" class="primary" id="convert" disabled>Start conversion</button>
-          <button type="button" id="cancel" hidden>Cancel job</button>
         </div>
       </section>
+    </div>
       <section class="panel job" aria-labelledby="job-title">
-        <h2 id="job-title">Job details</h2>
-        <div class="status-row">
-          <span id="stage" class="stage" data-state="idle">Ready</span>
-          <span id="percent" class="percent" hidden></span>
-          <time id="elapsed">0:00</time>
+        <div class="job-overview">
+          <div>
+            <h2 id="job-title">Job status</h2>
+            <p id="current-source" class="current-source" hidden></p>
+          </div>
+          <div>
+            <div class="status-row">
+              <span id="stage" class="stage" data-state="idle">Ready</span>
+              <span id="percent" class="percent" hidden></span>
+              <time id="elapsed">0:00</time>
+              <button type="button" id="cancel" hidden>Cancel job</button>
+            </div>
+            <progress id="progress" max="100" aria-label="Current stage progress" hidden></progress>
+          </div>
         </div>
-        <progress id="progress" max="100" aria-label="Current stage progress" hidden></progress>
-        <p id="detail" class="detail">Choose a source and destination to start.</p>
+        <p id="detail" class="detail">Select a source file to start.</p>
         <p id="job-file" class="path"></p>
+        <p id="notification-status" class="detail" role="status" hidden></p>
+        <div class="actions" id="job-actions" hidden>
+          <button type="button" id="copy-output">Copy output path</button>
+          <button type="button" id="copy-diagnostics">Copy diagnostics</button>
+        </div>
         <details id="diagnostics" hidden>
           <summary>Diagnostics</summary>
           <pre id="log">Waiting for codec output…</pre>
         </details>
       </section>
     </div>
+    <div id="settings-page" hidden>
+      <header class="page-header">
+        <div class="section-bar"><span>Configuration</span><span>Local preferences</span></div>
+        <div class="intro-band">
+          <div>
+            <h1 id="settings-title-page" tabindex="-1">Settings</h1>
+            <p class="intro">Set conversion defaults, appearance, and Discord notifications.</p>
+          </div>
+        </div>
+      </header>
+      <div class="grid">
+        <section class="panel" aria-labelledby="preferences-title">
+          <h2 id="preferences-title">Preferences</h2>
+          <fieldset id="preferences" disabled>
+            <div class="field">
+              <label class="label" for="pref-theme">Theme</label>
+              <select id="pref-theme"><option value="system">System</option><option value="light">Light</option><option value="dark">Dark</option></select>
+            </div>
+            <div class="field">
+              <label class="label" for="pref-preset">Default preset</label>
+              <select id="pref-preset"><option value="dts-hd-ma">DTS-HD Master Audio</option><option value="true-hd">TrueHD with spatial metadata</option></select>
+              <small>Used when XFold opens.</small>
+            </div>
+            <div class="field">
+              <label class="label" for="pref-format">Default format for MKV sources</label>
+              <select id="pref-format"><option value="mka">Matroska audio (.mka)</option><option value="raw">Raw audio (.dts or .thd)</option></select>
+              <small>MKA keeps the selected track’s language.</small>
+            </div>
+            <div class="field">
+              <label class="label" for="pref-port">Browser port</label>
+              <input id="pref-port" type="number" min="1" max="65535" step="1" placeholder="Automatic" aria-describedby="port-help port-status">
+              <small id="port-help">Leave blank for Automatic. Changes apply the next time XFold starts.</small>
+              <small id="port-status" role="status"></small>
+              <div class="actions"><button id="save-port" type="button" disabled>Save port</button></div>
+            </div>
+            <div class="field">
+              <label class="label" for="webhook">Discord webhook URL</label>
+              <input id="webhook" type="password" autocomplete="off" spellcheck="false" maxlength="320" aria-describedby="webhook-help">
+              <small id="webhook-help">Posts a Discord embed after a successful conversion. It shares the media title or source filename without its extension, plus audio and export details.</small>
+              <small id="webhook-state" role="status"></small>
+              <div class="actions">
+                <button id="save-webhook" type="button">Save webhook</button>
+                <button id="remove-webhook" type="button" hidden>Remove webhook</button>
+              </div>
+            </div>
+          </fieldset>
+        </section>
+        <section class="panel" aria-labelledby="about-title">
+          <h2 id="about-title">About</h2>
+          <p id="about-version" class="detail">Connecting to XFold…</p>
+          <div class="field">
+            <h3 class="label">Updates</h3>
+            <p id="update-status" class="detail" role="status"></p>
+            <div class="actions">
+              <button id="check-updates" type="button" disabled>Check for updates</button>
+              <button id="install-update" type="button" hidden>Update and restart</button>
+            </div>
+          </div>
+          <div class="actions"><button type="button" id="copy-support" disabled>Copy support info</button></div>
+        </section>
+      </div>
+    </div>
+    <p id="feedback" class="sr-only" role="status"></p>
     <div id="announcement" class="sr-only" role="status" aria-live="polite" aria-atomic="true"></div>
   </main>
 </body>

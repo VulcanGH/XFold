@@ -116,11 +116,18 @@ impl Tools {
         config: &Path,
     ) -> Invocation {
         let mut args: Vec<OsString> = vec!["--config".into(), config.into()];
-        let options = match preset {
-            Preset::DtsHdMa => ["dts", "--layout", "7.1", "--bits", "24"],
-            Preset::TrueHd => ["encode", "--cluster", "12", "--fold-depth", "24"],
+        let options: &[&str] = match preset {
+            Preset::DtsHdMa => &["dts", "--layout", "7.1", "--bits", "24"],
+            Preset::TrueHd => &[
+                "encode",
+                "--cluster",
+                "12",
+                "--fold-depth",
+                "24",
+                "--presentations",
+            ],
         };
-        args.extend(options.map(OsString::from));
+        args.extend(options.iter().map(OsString::from));
         args.extend([
             "--progress".into(),
             "--out".into(),
@@ -133,6 +140,24 @@ impl Tools {
             args,
         }
     }
+}
+
+pub fn has_complete_truehd_presentations(summary: &str) -> bool {
+    summary.lines().any(|line| {
+        line.trim_start()
+            .strip_prefix("presentations the folds themselves, in every one of ")
+            .and_then(|line| line.strip_suffix(" restart intervals"))
+            .and_then(|count| count.parse::<u64>().ok())
+            .is_some_and(|count| count > 0)
+    })
+}
+
+pub fn truehd_decoded_samples(log: &str) -> Option<u64> {
+    log.lines().rev().find_map(|line| {
+        let (_, summary) = line.split_once("Processing complete: ")?;
+        let (_, samples) = summary.split_once(" frames, ")?;
+        samples.strip_suffix(" samples")?.parse().ok()
+    })
 }
 
 pub fn validate_input(info: &Value) -> bool {

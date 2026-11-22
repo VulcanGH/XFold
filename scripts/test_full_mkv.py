@@ -6,6 +6,7 @@ import os
 import shutil
 import subprocess
 import tempfile
+import time
 import xml.etree.ElementTree as XML
 
 from test_mkv_audio import ROOT, FIXTURES, MKV, digest
@@ -57,7 +58,10 @@ def fixture(root, minutes):
     checked(MKV / "mkvmerge.exe", "--disable-track-statistics-tags", "-o", source,
             "--chapters", chapters, "--global-tags", tags,
             "--attachment-mime-type", "text/plain", "--attach-file", attachment,
-            video, "--sync", "0:125", "--language", "0:jpn", "--track-name", "0:Spatial",
+            video,
+            "--language", "0:eng", "--track-name", "0:Alternate",
+            "--default-track-flag", "0:1", FIXTURES / "export-spatial.thd",
+            "--sync", "0:125", "--language", "0:jpn", "--track-name", "0:Spatial",
             "--default-track-flag", "0:1", "--original-flag", "0:0",
             "--commentary-flag", "0:1", audio, "--tags", f"0:{retained_tags}", subtitle)
     return source, seconds
@@ -84,12 +88,14 @@ def verify(source, root, exe, minutes):
     original_hash = digest(source)
     input_meta = identify(source)
     tracks = input_meta["tracks"]
-    subtitles = signature(source, 2)
+    subtitles = signature(source, 3)
     video = signature(source, 0)
     chapters = dump_xml(source, "chapters", root / "source-chapters.xml")
     tags = dump_xml(source, "tags", root / "source-tags.xml")
-    hash_audio = signature(source, 1)
-    reference = points(source, 1, root / "source-times.txt")
+    hash_alternate = signature(source, 1)
+    hash_spatial = signature(source, 2)
+    assert all(track["properties"]["default_track"] for track in tracks if track["type"] == "audio")
+    reference = points(source, 2, root / "source-times.txt")
     video_points = points(source, 0, root / "source-video.txt")
     assert abs(reference[0] - 125) <= 1, reference
     host = (exe, "--state-dir", root / "state")
@@ -98,28 +104,35 @@ def verify(source, root, exe, minutes):
         if minutes and mode == "replace":
             preset, codec = "dts-hd-ma", "A_DTS"
         output = root / f"{mode} 音.mkv"
-        result = invoke(*host, "convert", preset, "--track", 1, "--mkv-mode", mode, source, output)
+        result = invoke(*host, "convert", preset, "--track", 2, "--mkv-mode", mode, source, output)
         assert result.returncode == 0, (result.stdout, result.stderr)
         assert digest(source) == original_hash
         report = identify(output)
-        index = 3 if mode == "add" else 1
+        index = 1 if mode == "add" else 2
         stream = report["tracks"][index]
         assert stream["properties"]["codec_id"] == codec
-        assert stream["properties"]["default_track"] is (mode == "replace")
+        assert stream["properties"]["default_track"] is True
+        assert stream["properties"]["enabled_track"] is True
         assert stream["properties"]["language_ietf"] == "ja"
-        if "flag_original" in tracks[1]["properties"]:
-            assert stream["properties"].get("flag_original") == tracks[1]["properties"]["flag_original"]
+        if "flag_original" in tracks[2]["properties"]:
+            assert stream["properties"].get("flag_original") == tracks[2]["properties"]["flag_original"]
         assert stream["properties"].get("flag_commentary") is True
-        assert [t["type"] for t in report["tracks"]] == ["video", "audio", "subtitles"] + (["audio"] if mode == "add" else [])
-        assert signature(output, 0) == video and signature(output, 2) == subtitles
+        expected_types = ["video", "audio", "audio", "subtitles"]
+        if mode == "add":
+            expected_types.insert(1, "audio")
+        assert [t["type"] for t in report["tracks"]] == expected_types
+        assert signature(output, 0) == video and signature(output, len(expected_types) - 1) == subtitles
+        assert signature(output, 2 if mode == "add" else 1) == hash_alternate
         assert dump_xml(output, "chapters", root / f"{mode}-chapters.xml") == chapters
         assert dump_xml(output, "tags", root / f"{mode}-tags.xml") == tags
         attached = root / f"{mode}-attachment.txt"
         checked(MKV / "mkvextract.exe", output, "attachments", f'{report["attachments"][0]["id"]}:{attached}')
         assert attached.read_bytes() == (root / "note.txt").read_bytes()
         if mode == "add":
-            assert signature(output, 1) == hash_audio
-            assert report["tracks"][1]["properties"]["default_track"] == tracks[1]["properties"]["default_track"]
+            assert signature(output, 3) == hash_spatial
+            audio = [track["properties"] for track in report["tracks"] if track["type"] == "audio"]
+            assert [track["track_name"] for track in audio] == ["XFold converted audio", "Alternate", "Spatial"]
+            assert [track["default_track"] for track in audio] == [True, False, False]
         actual = points(output, stream["id"], root / f"{mode}-audio.txt")
         actual_video = points(output, 0, root / f"{mode}-video.txt")
         assert actual_video == video_points
@@ -144,14 +157,14 @@ def verify(source, root, exe, minutes):
     if not minutes:
         tagged = root / "track tags.mkv"
         shutil.copyfile(source, tagged)
-        checked(MKV / "mkvpropedit.exe", tagged, "--tags", f"track:a1:{root / 'retained-tags.xml'}")
-        result = invoke(*host, "convert", "dts-hd-ma", "--track", 1, "--mkv-mode", "replace", tagged, invalid)
+        checked(MKV / "mkvpropedit.exe", tagged, "--tags", f"track:a2:{root / 'retained-tags.xml'}")
+        result = invoke(*host, "convert", "dts-hd-ma", "--track", 2, "--mkv-mode", "replace", tagged, invalid)
         assert result.returncode and "track-specific tags" in result.stderr and not invalid.exists(), result.stderr
 
 
 def verify_browser(root, source, test_binary):
     from playwright.sync_api import expect, sync_playwright
-    from test_web_ui import host
+    from test_web_ui import host, select_file
     edge = os.environ.get("XFOLD_TEST_BROWSER",
         r"C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe")
     env = {**os.environ, "XFOLD_BROWSER_TEST_ROOT": str(root), "XFOLD_BROWSER_TEST_SOURCE": source.name}
@@ -160,34 +173,46 @@ def verify_browser(root, source, test_binary):
         browser = playwright.chromium.launch(executable_path=edge, headless=True)
         page = browser.new_page()
         page.goto(url)
-        page.get_by_role("button", name="Choose file").click()
+        select_file(page, source)
         track = page.get_by_label("MKV audio track")
         expect(track).to_be_enabled()
-        track.select_option("1")
+        track.select_option("2")
         fmt = page.get_by_label("Output format")
         stage = page.locator("#stage")
-        for mode, count in (("add", 4), ("replace", 3)):
+        def status():
+            return page.evaluate("""async () => {
+                const token = sessionStorage.getItem('xfold-session');
+                const reply = await fetch('/api/status', {headers:{Authorization:'Bearer ' + token}});
+                return await reply.json();
+            }""")
+
+        for mode, count in (("add", 5), ("replace", 4)):
             expect(fmt).to_be_enabled()
             fmt.select_option(mode)
             expect(page.locator("#mkv-mode-help")).to_be_visible()
-            save = page.get_by_role("button", name="Save as")
-            save.click()
-            expect(page.locator("#output-path")).to_contain_text("export.mkv")
-            previous = page.evaluate("""async () => {
-                const token = sessionStorage.getItem('xfold-session');
-                const reply = await fetch('/api/status', {headers:{Authorization:'Bearer ' + token}});
-                return (await reply.json()).attempt?.id ?? null;
-            }""")
+            expect(page.locator("#convert")).to_be_enabled()
+            expect(page.locator("#output-path")).to_contain_text(".mkv")
+            previous = (status()["attempt"] or {}).get("id")
             page.locator("#convert").click()
-            page.wait_for_function("""async previous => {
-                const token = sessionStorage.getItem('xfold-session');
-                const reply = await fetch('/api/status', {headers:{Authorization:'Bearer ' + token}});
-                const state = await reply.json();
-                return !state.running && state.attempt?.id !== previous && state.attempt?.output.endsWith('export.mkv');
-            }""", arg=previous, timeout=60_000)
+            deadline = time.monotonic() + 60
+            while time.monotonic() < deadline:
+                state = status()
+                attempt = state["attempt"]
+                if not state["running"] and attempt and attempt["id"] != previous:
+                    assert attempt["stage"] == "succeeded", attempt
+                    break
+                time.sleep(0.1)
+            else:
+                raise AssertionError(f"No completed {mode} conversion: {state}")
+            exported = Path(attempt["output"])
             expect(stage).to_have_text("Complete", timeout=15_000)
-            exported = root / "export.mkv"
-            assert len(identify(exported)["tracks"]) == count
+            assert exported.parent.samefile(source.parent)
+            tracks = identify(exported)["tracks"]
+            assert len(tracks) == count
+            if mode == "add":
+                audio = [track["properties"] for track in tracks if track["type"] == "audio"]
+                assert audio[0]["track_name"] == "XFold converted audio"
+                assert [track["default_track"] for track in audio] == [True, False, False]
             exported.replace(root / f"browser-{mode}.mkv")
         browser.close()
     print("Passed both full-MKV modes through the browser.", flush=True)

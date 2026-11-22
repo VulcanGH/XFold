@@ -38,6 +38,17 @@ struct ProcessInfo {
 }
 
 #[repr(C)]
+#[derive(Default)]
+struct IoCounters {
+    read_operations: u64,
+    write_operations: u64,
+    other_operations: u64,
+    read_bytes: u64,
+    write_bytes: u64,
+    other_bytes: u64,
+}
+
+#[repr(C)]
 struct JobLimits {
     // JOBOBJECT_BASIC_LIMIT_INFORMATION, followed by IO_COUNTERS and SIZE_Ts.
     times: [i64; 2],
@@ -47,7 +58,7 @@ struct JobLimits {
     affinity: usize,
     priority: u32,
     scheduling: u32,
-    io: [u64; 6],
+    io: IoCounters,
     memory: [usize; 4],
 }
 
@@ -88,6 +99,7 @@ unsafe extern "system" {
     ) -> Bool;
     fn WaitForSingleObject(handle: Handle, milliseconds: u32) -> u32;
     fn GetExitCodeProcess(process: Handle, code: *mut u32) -> Bool;
+    fn GetProcessIoCounters(process: Handle, counters: *mut IoCounters) -> Bool;
     fn GetDiskFreeSpaceExW(
         path: *const u16,
         available: *mut u64,
@@ -271,6 +283,12 @@ impl Child {
             258 => Ok(None),
             _ => Err(io::Error::last_os_error()),
         }
+    }
+
+    pub fn bytes_read(&self) -> io::Result<u64> {
+        let mut counters = IoCounters::default();
+        ok(unsafe { GetProcessIoCounters(self.process.0, &mut counters) })?;
+        Ok(counters.read_bytes)
     }
 
     pub fn terminate(&self) -> io::Result<()> {

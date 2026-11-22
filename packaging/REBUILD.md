@@ -18,3 +18,6 @@ external library sources. The exact MXE dependency closure for the official
 Windows binaries has not been verified. The Harletty build also depends on the
 upstream workspace and release environment described by its own workflow files.
 The source kit is intended for local evaluation and rebuild review.
+
+See [RELEASE.md](RELEASE.md) for creating the installer and the matching
+standalone source archive.

@@ -20,6 +20,26 @@ pub enum MkvMode {
     Replace,
 }
 
+impl MkvMode {
+    pub fn converted_index(self, tracks: &[Track], selected: usize) -> usize {
+        match self {
+            Self::Add => tracks
+                .iter()
+                .position(Track::is_audio)
+                .unwrap_or(tracks.len()),
+            Self::Replace => selected,
+        }
+    }
+
+    pub fn converted_flag(self, source: &TrackProperties, flag: &str, default: bool) -> bool {
+        match (self, flag) {
+            (Self::Add, "default_track" | "enabled_track") => true,
+            (Self::Add, "forced_track") => false,
+            _ => source.flag(flag, default),
+        }
+    }
+}
+
 impl MkvTools {
     pub fn resolve() -> io::Result<Self> {
         let root = bundle_root()?.join("mkvtoolnix/mkvtoolnix");
@@ -50,10 +70,20 @@ impl MkvTools {
         }
     }
 
-    pub fn mux_audio(&self, input: &Path, output: &Path) -> Invocation {
+    pub fn mux_audio(&self, input: &Path, output: &Path, language: Option<&str>) -> Invocation {
+        let mut args = vec!["-o".into(), output.into()];
+        if let Some(language) = language {
+            args.extend([
+                "--normalize-language-ietf".into(),
+                "off".into(),
+                "--language".into(),
+                format!("0:{language}").into(),
+            ]);
+        }
+        args.push(input.into());
         Invocation {
             exe: self.merge.clone(),
-            args: vec!["-o".into(), output.into(), input.into()],
+            args,
         }
     }
 
@@ -83,24 +113,22 @@ impl MkvTools {
         audio: &Path,
         output: &Path,
         tracks: &[Track],
-        selected: &Track,
+        selected_index: usize,
         mode: MkvMode,
         offset_ms: u64,
         scale: u64,
     ) -> Invocation {
         let replacing = matches!(mode, MkvMode::Replace);
-        let mut order = tracks
+        let selected = &tracks[selected_index];
+        let converted_index = mode.converted_index(tracks, selected_index);
+        let mut order: Vec<_> = tracks
             .iter()
-            .map(|track| {
-                if replacing && track.id == selected.id {
-                    "1:0".into()
-                } else {
-                    format!("0:{}", track.id)
-                }
-            })
-            .collect::<Vec<_>>();
-        if !replacing {
-            order.push("1:0".into());
+            .map(|track| format!("0:{}", track.id))
+            .collect();
+        if replacing {
+            order[converted_index] = "1:0".into();
+        } else {
+            order.insert(converted_index, "1:0".into());
         }
         let mut args = vec![
             "--disable-track-statistics-tags".into(),
@@ -117,15 +145,18 @@ impl MkvTools {
         ];
         if replacing {
             args.extend(["--audio-tracks".into(), format!("!{}", selected.id).into()]);
+        } else {
+            for track in tracks.iter().filter(|track| track.is_audio()) {
+                args.extend([
+                    "--default-track-flag".into(),
+                    format!("{}:0", track.id).into(),
+                ]);
+            }
         }
         args.push(source.into());
         args.extend(["--sync".into(), format!("0:{offset_ms}").into()]);
         let props = &selected.properties;
-        let language = props
-            .language_ietf
-            .as_deref()
-            .or(props.language.as_deref())
-            .unwrap_or("und");
+        let language = props.language_tag().unwrap_or("und");
         args.extend(["--language".into(), format!("0:{language}").into()]);
         if replacing {
             if let Some(name) = &props.track_name {
@@ -138,12 +169,7 @@ impl MkvTools {
             if property.starts_with("flag_") && props.flag_value(property).is_none() {
                 continue;
             }
-            let original = props.flag(property, default);
-            let value = if replacing || property != "default_track" && property != "forced_track" {
-                original
-            } else {
-                false
-            };
+            let value = mode.converted_flag(props, property, default);
             args.extend([option.into(), format!("0:{}", u8::from(value)).into()]);
         }
         args.push(audio.into());
@@ -209,6 +235,10 @@ pub struct TrackProperties {
 }
 
 impl Identification {
+    pub fn title(&self) -> Option<&str> {
+        self.container.properties.get("title")?.as_str()
+    }
+
     pub fn is_matroska(&self) -> bool {
         self.container.recognized
             && self.container.supported
@@ -239,6 +269,13 @@ impl Identification {
 }
 
 impl TrackProperties {
+    pub fn language_tag(&self) -> Option<&str> {
+        [self.language_ietf.as_deref(), self.language.as_deref()]
+            .into_iter()
+            .flatten()
+            .find(|tag| !tag.is_empty() && !tag.eq_ignore_ascii_case("und"))
+    }
+
     pub fn flag_value(&self, field: &str) -> Option<bool> {
         if field == "default_track" {
             self.default_track
