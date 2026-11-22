@@ -1,8 +1,9 @@
 # XFold Windows releases
 
-The offline Windows x64 setup includes the XFold host, its loopback browser UI,
-the pinned Harletty CLI, Harlettizer and the complete MKVToolNix portable tree.
-The Rust compiler and other build tools are needed when rebuilding.
+Public Windows x64 setup includes the XFold host, its loopback browser UI,
+and the pinned Harletty CLI and Harlettizer. Setup downloads the official
+MKVToolNix portable archive and checks its hash before installation. The
+application runs offline after setup.
 
 ## Build the candidate
 
@@ -17,7 +18,7 @@ $env:CARGO_HOME = "$PWD\tools\cargo-home"
 $encoder = Get-ChildItem tools/source/harlettizer -Directory | Select-Object -First 1
 & tools/toolchain/bin/cargo.exe vendor --locked --manifest-path (Join-Path $encoder.FullName Cargo.toml) --sync Cargo.toml target/package-vendor > target/package-vendor-config.toml
 powershell -NoProfile -ExecutionPolicy Bypass -File scripts/cargo-xfold.ps1 build --release --locked --offline --target x86_64-pc-windows-gnu
-python scripts/package_xfold.py --exe target/x86_64-pc-windows-gnu/release/xfold.exe --evidence-dir target/tool-evidence
+python scripts/package_xfold.py --exe target/x86_64-pc-windows-gnu/release/xfold.exe --evidence-dir target/tool-evidence --download-mkvtoolnix
 ```
 
 The output contains `XFold-<version>-windows-x64-setup.exe`,
@@ -69,8 +70,8 @@ bytes. A build without the pin keeps the update controls disabled.
 ## Before publishing
 
 - Confirm the public GitHub repository. XFold's own code is MIT-licensed.
-- Resolve the exact Windows MKVToolNix build dependencies and complete the
-  codec redistribution review described in [third-party notices](../docs/TOOL_NOTICES.md).
-  A fresh package still contains the current local evaluation bundle.
+- Use the verified official MKVToolNix download during setup for public
+  releases. See the [third-party notices](../docs/TOOL_NOTICES.md) for the
+  codec tools and the offline evaluation package.
 - Document the clean Windows install and signed update results. TrueHD receiver
   playback remains unverified.

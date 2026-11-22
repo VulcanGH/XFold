@@ -87,7 +87,7 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw 'Rust tests failed' }
           ./scripts/cargo-xfold.ps1 build --release --locked --offline --target x86_64-pc-windows-gnu
           if ($LASTEXITCODE -ne 0) { throw 'XFold build failed' }
-          python scripts/package_xfold.py --exe target/x86_64-pc-windows-gnu/release/xfold.exe --evidence-dir $env:XFOLD_EVIDENCE
+          python scripts/package_xfold.py --exe target/x86_64-pc-windows-gnu/release/xfold.exe --evidence-dir $env:XFOLD_EVIDENCE --download-mkvtoolnix
           if ($LASTEXITCODE -ne 0) { throw 'Installer packaging failed' }
 
       - name: Verify the installed app and offline conversions

@@ -1,9 +1,11 @@
 # Source and rebuild materials
 
-The installer includes the pinned upstream Harlettizer, Harletty and MKVToolNix
-source archives, the XFold source and installer recipe, and the Cargo dependency
+The installer includes the pinned upstream Harlettizer and Harletty source
+archives, the XFold source and installer recipe, and the Cargo dependency
 sources used for XFold and Harlettizer. The archive also contains the locked
-Harletty CLI crates and its exact TrueHD decoder fork.
+Harletty CLI crates and its exact TrueHD decoder fork. Public setup obtains
+MKVToolNix from its official distributor. Its pinned source URL is in
+`xfold/tools/manifest.toml`.
 
 Extract `xfold-sources.zip`. Apply `cargo-vendor-config.toml` as Cargo config
 with the vendor directory resolved from the extracted archive root. Preserve
@@ -12,7 +14,8 @@ for `x86_64-pc-windows-gnu`. Build Harlettizer with the command and toolchain
 listed in `xfold/tools/manifest.toml`. All code dependencies for these two
 builds are in `vendor/`. The manifest pins the toolchain and linker.
 
-MKVToolNix's release archive includes its Windows build and packaging recipes
+The offline evaluation package also includes MKVToolNix's release source archive.
+That archive contains the upstream Windows build and packaging recipes
 under `packaging/windows/`. These reference the upstream MXE environment and
 external library sources. The exact MXE dependency closure for the official
 Windows binaries has not been verified. The Harletty build also depends on the

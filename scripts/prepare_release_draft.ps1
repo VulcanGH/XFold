@@ -99,7 +99,7 @@ try {
     $null = Get-VerifiedAssets $draft.databaseId $files
     $retargeted = $true
     Invoke-GitHub @('api', '--method', 'PATCH', "$releaseApi/$($draft.databaseId)",
-        '-f', "target_commitish=$Commit", '--silent')
+        '-f', "tag_name=$tag", '-f', "target_commitish=$Commit", '--silent')
     $updated = Get-Draft
     if ($updated.targetCommitish -cne $Commit) { throw 'GitHub did not retarget the draft to the tested commit.' }
 } catch {
@@ -111,7 +111,7 @@ try {
     if ($retargeted) {
         try {
             Invoke-GitHub @('api', '--method', 'PATCH', "$releaseApi/$($draft.databaseId)",
-                '-f', "target_commitish=$($draft.targetCommitish)", '--silent')
+                '-f', "tag_name=$tag", '-f', "target_commitish=$($draft.targetCommitish)", '--silent')
         } catch { Write-Warning "Could not restore the previous commit: $_" }
     }
     throw

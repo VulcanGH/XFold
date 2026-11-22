@@ -31,7 +31,7 @@ def key_exists(name):
 
 def setup(installer, install_dir):
     # NSIS requires /D= to be the last argument and its value to be unquoted.
-    return subprocess.run(f'"{installer}" /S /D={install_dir}', timeout=120).returncode
+    return subprocess.run(f'"{installer}" /S /D={install_dir}', timeout=240).returncode
 
 
 def minimal_env():

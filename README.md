@@ -15,13 +15,14 @@ cannot produce those mixes for the full track, XFold stops before saving it.
 
 ## Install and use
 
-The v1.0.0 installer is being prepared. [Build from source](#build-from-source)
-to try XFold now.
+Get the Windows x64 installer from [GitHub Releases](https://github.com/VulcanGH/XFold/releases).
 
-Run the Windows x64 installer on Windows 10 or later, then open **XFold**
+Run the installer on Windows 10 version 1809 or later, then open **XFold**
 from the Start menu. Setup requests administrator approval and defaults
-to `C:\Program Files\XFold`. The installer includes Harletty, Harlettizer, and
-MKVToolNix. Conversions run offline, and source files stay in place.
+to `C:\Program Files\XFold`. Setup bundles Harletty and Harlettizer and
+downloads the pinned MKVToolNix build directly from its official site.
+This requires an internet connection during setup. Conversions run offline,
+and source files stay in place.
 
 If you have an earlier per-user preview installed, uninstall it from Windows
 Installed apps before installing the machine-wide package. Your XFold

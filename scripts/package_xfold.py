@@ -100,7 +100,7 @@ def prepare_harletty(notices, offline):
     return crates, git_sources
 
 
-def build_source_kit(payload, offline):
+def build_source_kit(payload, offline, download_mkvtoolnix):
     source_dir = payload / "source"
     source_dir.mkdir()
     harletty_notices = payload / "tools/bin/harletty/notices/dependencies"
@@ -110,13 +110,15 @@ def build_source_kit(payload, offline):
     notice_dir.mkdir(exist_ok=True)
     shutil.copy2(supplement, notice_dir / "NOTICE.txt")
     projects = MANIFEST["tools"]
-    mkv = projects["mkvtoolnix"]
-    mkv_source = acquire(mkv["source_url"], mkv["source_sha256"], "mkvtoolnix-103.0.tar.xz", offline)
     harletty = projects["harletty"]
     h_source = acquire(harletty["source_url"], harletty["source_sha256"],
                        f"harletty-{harletty['commit']}-source.zip", offline)
     encoder = projects["harlettizer"]
     encoder_source = acquire(encoder["url"], encoder["sha256"], f"harlettizer-{encoder['commit']}.zip", offline)
+    upstream_sources = [h_source, encoder_source, *git_sources]
+    if not download_mkvtoolnix:
+        mkv = projects["mkvtoolnix"]
+        upstream_sources.append(acquire(mkv["source_url"], mkv["source_sha256"], "mkvtoolnix-103.0.tar.xz", offline))
     vendor = TARGET / "package-vendor"
     cargo_config = TARGET / "package-vendor-config.toml"
     if not vendor.is_dir() or not cargo_config.is_file():
@@ -127,13 +129,13 @@ def build_source_kit(payload, offline):
     (source_dir / "REBUILD.md").write_bytes((ROOT / "packaging/REBUILD.md").read_bytes())
     with zipfile.ZipFile(source_dir / "xfold-sources.zip", "w", zipfile.ZIP_DEFLATED,
                          compresslevel=3, strict_timestamps=False) as archive:
-        for path in (h_source, encoder_source, mkv_source, *git_sources):
+        for path in upstream_sources:
             archive.write(path, f"upstream/{path.name}")
         for path in crates:
             archive.write(path, f"harletty-crates/{path.name}")
         archive.writestr("cargo-vendor-config.toml", config)
         archive.writestr("upstream/SHA256SUMS.txt", "".join(
-            f"{sha(path)}  {path.name}\n" for path in (h_source, encoder_source, mkv_source, *git_sources)))
+            f"{sha(path)}  {path.name}\n" for path in upstream_sources))
         archive_tree(archive, vendor, "vendor")
         for name in ("src", "ui", "scripts", "packaging"):
             archive_tree(archive, ROOT / name, f"xfold/{name}")
@@ -146,6 +148,8 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--exe", required=True, type=Path)
     parser.add_argument("--offline", action="store_true")
+    parser.add_argument("--download-mkvtoolnix", action="store_true",
+                        help="Have Setup fetch official MKVToolNix instead of redistributing its binary")
     parser.add_argument("--output-dir", type=Path, default=TARGET / "release-artifacts")
     parser.add_argument("--evidence-dir", type=Path, help="Fresh qualification records for a rebuilt encoder")
     args = parser.parse_args()
@@ -166,7 +170,9 @@ def main():
     temporary_output = output.with_suffix(".pending.exe")
     with tempfile.TemporaryDirectory(dir=TARGET, prefix="installer-") as scratch:
         payload = Path(scratch) / "payload"
-        for tool in MANIFEST["tools"].values():
+        for name, tool in MANIFEST["tools"].items():
+            if args.download_mkvtoolnix and name == "mkvtoolnix":
+                continue
             directory = tool["directory"]
             shutil.copytree(TOOLS / "bin" / directory, payload / "tools/bin" / directory)
         shutil.copy2(args.exe, payload / "xfold.exe")
@@ -186,7 +192,7 @@ def main():
         shutil.copytree(runtime / "licenses", payload / "notices/rust/licenses")
         for name in ("COPYRIGHT.html", "COPYRIGHT-library.html"):
             shutil.copy2(runtime / name, payload / "notices/rust" / name)
-        build_source_kit(payload, args.offline)
+        build_source_kit(payload, args.offline, args.download_mkvtoolnix)
         # Cargo vendor retains the actual dependency license files. Make their
         # copies accessible alongside the binaries as well.
         for package in (TARGET / "package-vendor").iterdir():
@@ -197,9 +203,15 @@ def main():
                     shutil.copy2(path, dest / path.name)
         (payload / ".xfold-payload").write_text(version + "\n")
         hashes = {file.relative_to(payload).as_posix(): sha(file) for file in sorted(payload.rglob("*")) if file.is_file()}
+        options = []
+        if args.download_mkvtoolnix:
+            mkv = MANIFEST["tools"]["mkvtoolnix"]
+            options = [f"-DMKVTOOLNIX_URL={mkv['url']}", f"-DMKVTOOLNIX_SHA256={mkv['sha256']}"]
+            files = json.loads((TOOLS / "bundle-lock.json").read_text())["files"]["mkvtoolnix"]
+            hashes.update({f"tools/bin/mkvtoolnix/{name}": digest for name, digest in files.items()})
         (payload / "bundle-sha256.json").write_text(json.dumps(hashes, indent=2) + "\n")
         subprocess.run([str(compiler), "-V2", f"-DVERSION={version}", f"-DPAYLOAD={payload}",
-                        f"-DOUTPUT={temporary_output}", str(ROOT / "packaging/xfold.nsi")], check=True)
+                        f"-DOUTPUT={temporary_output}", *options, str(ROOT / "packaging/xfold.nsi")], check=True)
         source_copy = sources.with_suffix(".pending.zip")
         shutil.copyfile(payload / "source/xfold-sources.zip", source_copy)
         source_copy.replace(sources)

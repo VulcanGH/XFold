@@ -1,8 +1,13 @@
 # Exact-bundle notices and rebuild obligations
 
-This is the distribution inventory for the local installer candidate.
+This is the inventory for the public setup and the offline evaluation package.
 Pins and acquisition commands live in [the manifest](../tools/manifest.toml).
 Keep notices alongside the tools when installing; do not package only EXEs.
+
+Public Setup requests and verifies the official MKVToolNix portable archive
+from the MKVToolNix download site. The upstream archive supplies the
+MKVToolNix notices and license files. The offline evaluation package also
+embeds those binaries.
 
 Codec work is provided by the [Harletty](https://github.com/harletty/harletty-bridge)
 and [Harlettizer](https://github.com/harletty/harlettizer) projects. Harlettizer
@@ -40,12 +45,13 @@ come from verified w64devkit 2.11.0. The reference hashes are recorded in
 can change binary bytes; qualify any new binary instead of silently adopting it.
 
 The installer includes Rust runtime and dependency notices, the locked encoder
-dependencies, the Harletty CLI dependency archives and decoder fork, and the
-official MKVToolNix 103.0 source archive. The zlib-compressed installer stub
+dependencies, and the Harletty CLI dependency archives and decoder fork.
+The offline evaluation package also contains the official MKVToolNix 103.0
+source archive. The zlib-compressed installer stub
 comes from the manifest-pinned w64devkit NSIS compiler. See the
 [NSIS license reference](https://nsis.sourceforge.io/License).
 
-Public distribution remains open. The MKVToolNix archive contains Windows
+The MKVToolNix archive contains Windows
 packaging recipes and bundled project sources but refers to an external MXE
 environment. Its exact official Windows dependency inputs have not been
 established. The v103.0 file `packaging/windows/setup_cross_compilation_env.sh`

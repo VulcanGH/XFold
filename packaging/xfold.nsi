@@ -8,7 +8,7 @@ SetCompressor /SOLID zlib
 OutFile "${OUTPUT}"
 VIProductVersion "${VERSION}.0"
 VIAddVersionKey /LANG=1033 "ProductName" "XFold"
-VIAddVersionKey /LANG=1033 "FileDescription" "XFold offline installer"
+VIAddVersionKey /LANG=1033 "FileDescription" "XFold Windows installer"
 VIAddVersionKey /LANG=1033 "FileVersion" "${VERSION}"
 VIAddVersionKey /LANG=1033 "LegalCopyright" "See included notices"
 
@@ -18,6 +18,9 @@ VIAddVersionKey /LANG=1033 "LegalCopyright" "See included notices"
 !include "x64.nsh"
 !include "WinVer.nsh"
 !define MUI_ABORTWARNING
+!ifdef MKVTOOLNIX_URL
+  !define MUI_DIRECTORYPAGE_TEXT_TOP "Setup downloads MKVToolNix from its official site. XFold works offline after installation."
+!endif
 !insertmacro MUI_PAGE_DIRECTORY
 !insertmacro MUI_PAGE_INSTFILES
 !insertmacro MUI_UNPAGE_CONFIRM
@@ -36,6 +39,12 @@ Function .onInit
     SetErrorLevel 2
     Quit
   ${EndIf}
+!ifdef MKVTOOLNIX_URL
+  IfFileExists "$SYSDIR\tar.exe" +4
+  MessageBox MB_OK|MB_ICONSTOP "Setup requires the Windows tar tool. Use Windows 10 version 1809 or newer." /SD IDOK
+  SetErrorLevel 2
+  Quit
+!endif
 FunctionEnd
 
 Function un.onInit
@@ -58,6 +67,14 @@ Section "XFold"
     SetOutPath "$INSTDIR\pending"
     File /r "${PAYLOAD}\*"
     IfErrors copy_failed
+!ifdef MKVTOOLNIX_URL
+    DetailPrint "Downloading and checking MKVToolNix..."
+    InitPluginsDir
+    File /oname=$PLUGINSDIR\fetch-mkvtoolnix.ps1 "fetch-mkvtoolnix.ps1"
+    nsExec::ExecToLog '"$SYSDIR\WindowsPowerShell\v1.0\powershell.exe" -NoProfile -NonInteractive -ExecutionPolicy Bypass -File "$PLUGINSDIR\fetch-mkvtoolnix.ps1" -ArchiveUri "${MKVTOOLNIX_URL}" -Sha256 "${MKVTOOLNIX_SHA256}" -Destination "$INSTDIR\pending\tools\bin\mkvtoolnix"'
+    Pop $0
+    StrCmp $0 "0" 0 download_failed
+!endif
     SetOutPath "$INSTDIR"
     IfFileExists "$INSTDIR\app\*.*" 0 activate
     ClearErrors
@@ -81,6 +98,15 @@ Section "XFold"
     WriteRegDWORD HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\XFold" "NoRepair" 1
     RMDir /r "$INSTDIR\previous"
     Goto done
+
+!ifdef MKVTOOLNIX_URL
+  download_failed:
+    SetOutPath "$INSTDIR"
+    RMDir /r "$INSTDIR\pending"
+    MessageBox MB_OK|MB_ICONSTOP "Setup could not download or verify MKVToolNix. Check your internet connection and try again." /SD IDOK
+    SetErrorLevel 2
+    Quit
+!endif
 
   restore:
     IfFileExists "$INSTDIR\previous\*.*" 0 copy_failed
