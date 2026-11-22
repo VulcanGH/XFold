@@ -1,4 +1,5 @@
 """Stage Rust 1.92.0 GNU locally; no registry, PATH or machine installation changes."""
+import argparse
 import hashlib
 import json
 import pathlib
@@ -18,6 +19,9 @@ def download(url, path):
 
 
 def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--evidence-dir", type=pathlib.Path, default=ROOT / "docs/evidence/phase0")
+    evidence = parser.parse_args().evidence_dir
     downloads = ROOT / "tools/downloads"
     downloads.mkdir(parents=True, exist_ok=True)
     manifest = downloads / f"channel-rust-{VERSION}.toml"
@@ -50,7 +54,8 @@ def main():
                     shutil.copy2(child, dest)
         records.append(dict(component=name, url=url, sha256=actual))
         print(f"Staged {name} {VERSION}", flush=True)
-    (ROOT / "docs/evidence/phase0/rust-components.json").write_text(
+    evidence.mkdir(parents=True, exist_ok=True)
+    (evidence / "rust-components.json").write_text(
         json.dumps(records, indent=2) + "\n")
 
 

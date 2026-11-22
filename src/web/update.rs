@@ -9,7 +9,7 @@ use serde_json::json;
 
 use super::{App, Http, Result, desktop, json_response, problem, queue::JobState, runner};
 
-const REPOSITORY: &str = "VulcanGH/xfold";
+const REPOSITORY: &str = "VulcanGH/XFold";
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 
 fn certificate() -> Option<&'static str> {

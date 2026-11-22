@@ -77,9 +77,11 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--build", action="store_true")
     parser.add_argument("--offline", action="store_true")
+    parser.add_argument("--evidence-dir", type=Path, default=EVIDENCE)
     args = parser.parse_args()
+    evidence = args.evidence_dir
     DOWNLOADS.mkdir(parents=True, exist_ok=True)
-    EVIDENCE.mkdir(parents=True, exist_ok=True)
+    evidence.mkdir(parents=True, exist_ok=True)
     specs = MANIFEST["tools"]
     h = specs["harletty"]
     binary = acquire(h["url"], h["sha256"], h["url"].rsplit("/", 1)[1], args.offline)
@@ -122,16 +124,21 @@ def main():
                    MANIFEST["build"]["rust"]["target"], "-p", "hz-cli", "-p", "xtask"]
         if args.offline:
             command.append("--offline")
-        with (EVIDENCE / "harlettizer-build.txt").open("w") as log:
-            subprocess.run(command, cwd=source, env=env, stdout=log, stderr=subprocess.STDOUT, check=True)
+        build_log = evidence / "harlettizer-build.txt"
+        with build_log.open("w") as log:
+            result = subprocess.run(command, cwd=source, env=env, stdout=log, stderr=subprocess.STDOUT)
+        if result.returncode:
+            print(build_log.read_text(encoding="utf-8", errors="replace")[-4000:], flush=True)
+            result.check_returncode()
         output = Path(env["CARGO_TARGET_DIR"]) / MANIFEST["build"]["rust"]["target"] / "release/harlettizer.exe"
         shutil.copy2(output, ROOT / "tools/bin/harlettizer/harlettizer.exe")
         # This is the workspace's resolved dependency superset, including tools
         # and optional packages, not a claim that every entry is linked in the CLI.
-        metadata = subprocess.run([str(rust / "cargo.exe"), "metadata", "--locked",
-                                   "--offline", "--format-version", "1",
-                                   "--filter-platform", target], cwd=source, env=env,
-                                  capture_output=True, check=True)
+        metadata_command = [str(rust / "cargo.exe"), "metadata", "--locked",
+                            "--format-version", "1", "--filter-platform", target]
+        if args.offline:
+            metadata_command.append("--offline")
+        metadata = subprocess.run(metadata_command, cwd=source, env=env, stdout=subprocess.PIPE, check=True)
         packages = json.loads(metadata.stdout)["packages"]
         licence_rows = []
         for package in packages:
@@ -147,7 +154,7 @@ def main():
             licence_rows.append({"name": package["name"], "version": package["version"],
                                  "licence": package["license"], "source": package["source"],
                                  "notice_files": [p.name for p in texts]})
-        (EVIDENCE / "harlettizer-workspace-licences.json").write_text(json.dumps(licence_rows, indent=2) + "\n")
+        (evidence / "harlettizer-workspace-licences.json").write_text(json.dumps(licence_rows, indent=2) + "\n")
     notices(source, ROOT / "tools/bin/harlettizer/notices")
     inventory = {}
     for name, spec in specs.items():
@@ -156,7 +163,7 @@ def main():
                            for p in sorted(base.rglob("*")) if p.is_file()}
     record = {"files": inventory, "harlettizer_lock_sha256": sha(source / "Cargo.lock"),
               "harlettizer_commit": hz["commit"], "qualification": "See qualification.json; staging is not qualification"}
-    (EVIDENCE / "bundle.json").write_text(json.dumps(record, indent=2) + "\n")
+    (evidence / "bundle.json").write_text(json.dumps(record, indent=2) + "\n")
     print("Staged verified artifacts; qualification is a separate gate.")
 
 

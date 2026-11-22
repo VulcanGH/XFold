@@ -3,6 +3,7 @@
 Requires staging with --build plus independent ffprobe/ffmpeg on PATH.
 All audio stays under ignored tools/fixtures; small diagnostic samples are retained.
 """
+import argparse
 import hashlib
 import json
 from pathlib import Path
@@ -45,7 +46,10 @@ def check(condition, message):
 
 
 def main():
-    global FFPROBE, RECORD
+    global FFPROBE, RECORD, OUT
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--evidence-dir", type=Path, default=OUT)
+    OUT = parser.parse_args().evidence_dir
     OUT.mkdir(parents=True, exist_ok=True)
     WORK.mkdir(parents=True, exist_ok=True)
     RECORD = {"gate": "open", "commands": [], "passed": [],

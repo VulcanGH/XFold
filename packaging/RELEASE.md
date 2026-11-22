@@ -24,9 +24,22 @@ before uploading. Test install, upgrade, conversion and uninstall on a clean
 Windows x64 machine from an elevated terminal with
 `scripts/test_installer.py` and the staged fixtures.
 
-## GitHub and in-app updates
+## GitHub Actions
 
-The update feed is `VulcanGH/xfold`. A user checks for updates in **Settings**
+Run **Actions → XFold release draft** on the default branch with the desired
+version in `Cargo.toml`. GitHub builds on Windows x64, qualifies the encoder
+built from the pinned source, then verifies setup, offline conversions, and
+uninstall. The draft points to the tested commit. Clear **Create a GitHub
+release draft after verification** for a build and test run. Existing drafts
+and releases are kept intact.
+
+GitHub builds are unsigned until Windows signing is configured. The installer
+and the source kit include the qualification records and the checksum of the
+encoder actually packaged by the run.
+
+## In-app updates
+
+The update feed is `VulcanGH/XFold`. A user checks for updates in **Settings**
 and chooses **Update and restart** once the workspace is idle. Windows asks
 for administrator approval before Setup starts. XFold checks
 the release asset digest, validates the installer's Windows Authenticode

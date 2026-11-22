@@ -1,0 +1,107 @@
+name: XFold release draft
+
+on:
+  workflow_dispatch:
+    inputs:
+      create_draft:
+        description: Create a GitHub release draft after verification
+        required: true
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: xfold-release
+  cancel-in-progress: false
+
+jobs:
+  build:
+    if: github.repository == 'VulcanGH/XFold' && github.ref == 'refs/heads/main'
+    runs-on: windows-2025
+    timeout-minutes: 35
+    # Keep the verified files in this job until they can be attached to the draft.
+    permissions:
+      contents: write
+    env:
+      XFOLD_EVIDENCE: target/release-qualification
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+
+      - name: Set the release version
+        shell: pwsh
+        run: |
+          $version = python -c 'import tomllib; print(tomllib.load(open("Cargo.toml", "rb"))["package"]["version"])'
+          if ($LASTEXITCODE -ne 0 -or $version -notmatch '^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$') {
+            throw 'Cargo.toml must declare a stable version'
+          }
+          "XFOLD_VERSION=$version" >> $env:GITHUB_ENV
+
+      - name: Stage pinned compiler and runtime tools
+        shell: pwsh
+        run: |
+          python scripts/portable_rust.py --evidence-dir $env:XFOLD_EVIDENCE
+          if ($LASTEXITCODE -ne 0) { throw 'Rust toolchain staging failed' }
+          python scripts/stage_tools.py --build --evidence-dir $env:XFOLD_EVIDENCE
+          if ($LASTEXITCODE -ne 0) { throw 'Runtime tool staging failed' }
+
+      - name: Qualify the rebuilt encoder
+        shell: pwsh
+        run: |
+          $pin = '2026-07-27-git-a757b708ae'
+          $archive = "ffmpeg-$pin-full_build.7z"
+          $file = Join-Path $env:RUNNER_TEMP $archive
+          curl.exe --fail --location --silent --show-error --retry 2 --output $file "https://github.com/GyanD/codexffmpeg/releases/download/$pin/$archive"
+          if ($LASTEXITCODE -ne 0 -or (Get-FileHash -LiteralPath $file).Hash.ToLowerInvariant() -ne '0226b6297dac0c9bf9b39ff36d8100c2fcd16354fca475c9b177ed24b8620f18') {
+            throw 'FFmpeg download or checksum verification failed'
+          }
+          $unpack = Join-Path $env:RUNNER_TEMP 'xfold-ffmpeg'
+          & 'C:\Program Files\7-Zip\7z.exe' x $file "-o$unpack" -y | Out-Null
+          if ($LASTEXITCODE -ne 0) { throw 'FFmpeg extraction failed' }
+          $ffmpeg = Join-Path $unpack "ffmpeg-$pin-full_build/bin"
+          $env:PATH = "$ffmpeg;$env:PATH"
+          $ffmpeg >> $env:GITHUB_PATH
+          python scripts/qualify_tools.py --evidence-dir $env:XFOLD_EVIDENCE
+          if ($LASTEXITCODE -ne 0) { throw 'Codec qualification failed' }
+
+      - name: Vendor locked release dependencies
+        shell: pwsh
+        run: |
+          $env:CARGO_HOME = Join-Path $PWD 'tools/cargo-home'
+          $encoder = Get-ChildItem 'tools/source/harlettizer' -Directory | Select-Object -First 1
+          & tools/toolchain/bin/cargo.exe vendor --locked --manifest-path (Join-Path $encoder.FullName 'Cargo.toml') --sync Cargo.toml target/package-vendor |
+            Set-Content -Encoding utf8 target/package-vendor-config.toml
+          if ($LASTEXITCODE -ne 0) { throw 'Cargo vendoring failed' }
+
+      - name: Build, test and package XFold
+        shell: pwsh
+        run: |
+          ./scripts/cargo-xfold.ps1 test --release --locked --offline --target x86_64-pc-windows-gnu
+          if ($LASTEXITCODE -ne 0) { throw 'Rust tests failed' }
+          ./scripts/cargo-xfold.ps1 build --release --locked --offline --target x86_64-pc-windows-gnu
+          if ($LASTEXITCODE -ne 0) { throw 'XFold build failed' }
+          python scripts/package_xfold.py --exe target/x86_64-pc-windows-gnu/release/xfold.exe --evidence-dir $env:XFOLD_EVIDENCE
+          if ($LASTEXITCODE -ne 0) { throw 'Installer packaging failed' }
+          $setup = "target/release-artifacts/XFold-$env:XFOLD_VERSION-windows-x64-setup.exe"
+          python scripts/test_installer.py $setup
+          if ($LASTEXITCODE -ne 0) { throw 'Machine-wide install, conversion or uninstall test failed' }
+
+      - name: Create a draft for maintainer review
+        if: inputs.create_draft
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $prefix = "target/release-artifacts/XFold-$env:XFOLD_VERSION"
+          $assets = @(
+            "$prefix-windows-x64-setup.exe", "$prefix-windows-x64-setup.sha256",
+            "$prefix-sources.zip", "$prefix-sources.sha256"
+          )
+          foreach ($file in $assets) {
+            if (-not (Test-Path -LiteralPath $file -PathType Leaf)) { throw "Missing release file: $file" }
+          }
+          gh release create "v$env:XFOLD_VERSION" @assets --repo $env:GITHUB_REPOSITORY --target $env:GITHUB_SHA --draft --title "XFold $env:XFOLD_VERSION" --generate-notes
+          if ($LASTEXITCODE -ne 0) { throw 'Draft creation failed. Existing releases are preserved.' }

@@ -135,6 +135,8 @@ def build_source_kit(payload, offline):
         archive.writestr("upstream/SHA256SUMS.txt", "".join(
             f"{sha(path)}  {path.name}\n" for path in (h_source, encoder_source, mkv_source, *git_sources)))
         archive_tree(archive, vendor, "vendor")
+        if (payload / "bundle-evidence").is_dir():
+            archive_tree(archive, payload / "bundle-evidence", "bundle-evidence")
         for name in ("src", "ui", "scripts", "packaging"):
             archive_tree(archive, ROOT / name, f"xfold/{name}")
         for name in ("Cargo.lock", "Cargo.toml", "build.rs", "LICENSE", "README.md", "tools/manifest.toml", "docs/TOOL_NOTICES.md"):
@@ -146,6 +148,7 @@ def main():
     parser.add_argument("--exe", required=True, type=Path)
     parser.add_argument("--offline", action="store_true")
     parser.add_argument("--output-dir", type=Path, default=TARGET / "release-artifacts")
+    parser.add_argument("--evidence-dir", type=Path, help="Fresh qualification records for a rebuilt encoder")
     args = parser.parse_args()
     version = subprocess.check_output([str(args.exe.resolve()), "--version"], text=True).strip().removeprefix("xfold ")
     if not re.fullmatch(r"\d+\.\d+\.\d+", version):
@@ -153,7 +156,10 @@ def main():
     compiler = TOOLS / "build/w64devkit/bin/makensis.exe"
     if sha(compiler) != "0ee6007dd310047ccb1ee73c79052db235cb8c31999b4dd325fd76c50bcfdd8f":
         raise ValueError("Installer compiler differs from the pinned w64devkit copy.")
-    subprocess.run(["python", str(ROOT / "scripts/verify_bundle.py")], check=True)
+    verify = ["python", str(ROOT / "scripts/verify_bundle.py")]
+    if args.evidence_dir:
+        verify += ["--evidence-dir", str(args.evidence_dir)]
+    subprocess.run(verify, check=True)
     output_dir = args.output_dir.resolve()
     output_dir.mkdir(parents=True, exist_ok=True)
     output = output_dir / f"XFold-{version}-windows-x64-setup.exe"
@@ -167,6 +173,17 @@ def main():
         shutil.copy2(args.exe, payload / "xfold.exe")
         shutil.copy2(ROOT / "packaging/update.ps1", payload / "update.ps1")
         shutil.copy2(TOOLS / "manifest.toml", payload / "tools/manifest.toml")
+        if args.evidence_dir:
+            evidence = payload / "bundle-evidence"
+            evidence.mkdir()
+            for name in ("bundle.json", "qualification.json", "verification.json"):
+                shutil.copy2(args.evidence_dir / name, evidence / name)
+            manifest_path = payload / "tools/manifest.toml"
+            encoder = MANIFEST["tools"]["harlettizer"]
+            original = encoder["binary_sha256"]
+            actual = sha(payload / "tools/bin" / encoder["directory"] / encoder["executables"][0])
+            content = manifest_path.read_text(encoding="utf-8")
+            manifest_path.write_text(content.replace(original, actual, 1), encoding="utf-8")
         shutil.copy2(ROOT / "docs/TOOL_NOTICES.md", payload / "THIRD-PARTY-NOTICES.md")
         shutil.copy2(ROOT / "README.md", payload / "README.md")
         shutil.copy2(ROOT / "LICENSE", payload / "LICENSE")

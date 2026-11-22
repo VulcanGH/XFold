@@ -51,7 +51,7 @@ function Get-Release {
     $name = "XFold-$version-windows-x64-setup.exe"
     $url = "https://github.com/$Repository/releases/download/v$version/$name"
     $assets = @($release.assets | Where-Object {
-        $_.name -ceq $name -and $_.browser_download_url -ceq $url -and
+        $_.name -ceq $name -and $_.browser_download_url -eq $url -and
         $_.digest -cmatch '^sha256:[0-9a-f]{64}$' -and $_.size -gt 0 -and $_.size -le 536870912
     })
     if ($assets.Count -eq 1) {
