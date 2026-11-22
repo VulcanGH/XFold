@@ -206,7 +206,8 @@ def main():
         options = []
         if args.download_mkvtoolnix:
             mkv = MANIFEST["tools"]["mkvtoolnix"]
-            options = [f"-DMKVTOOLNIX_URL={mkv['url']}", f"-DMKVTOOLNIX_SHA256={mkv['sha256']}"]
+            options = [f"-DMKVTOOLNIX_URL={mkv['url']}", f"-DMKVTOOLNIX_SHA256={mkv['sha256']}",
+                       f"-DMKVTOOLNIX_FILENAME={mkv['url'].rsplit('/', 1)[1]}"]
             files = json.loads((TOOLS / "bundle-lock.json").read_text())["files"]["mkvtoolnix"]
             hashes.update({f"tools/bin/mkvtoolnix/{name}": digest for name, digest in files.items()})
         (payload / "bundle-sha256.json").write_text(json.dumps(hashes, indent=2) + "\n")

@@ -20,9 +20,10 @@ Get the Windows x64 installer from [GitHub Releases](https://github.com/VulcanGH
 Run the installer on Windows 10 version 1809 or later, then open **XFold**
 from the Start menu. Setup requests administrator approval and defaults
 to `C:\Program Files\XFold`. Setup bundles Harletty and Harlettizer and
-downloads the pinned MKVToolNix build directly from its official site.
-This requires an internet connection during setup. Conversions run offline,
-and source files stay in place.
+downloads and verifies the pinned MKVToolNix build during setup. If the
+download fails, save the official archive beside the installer and run Setup
+again. Conversions run offline, and source files stay in place.
+[MKVToolNix 103.0 for Windows x64](https://mkvtoolnix.download/windows/releases/103.0/mkvtoolnix-64-bit-103.0.7z)
 
 If you have an earlier per-user preview installed, uninstall it from Windows
 Installed apps before installing the machine-wide package. Your XFold

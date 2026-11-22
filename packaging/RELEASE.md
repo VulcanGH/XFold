@@ -34,7 +34,9 @@ Windows x64 machine from an elevated terminal with
 Run **Actions → XFold release draft** on the default branch with the desired
 version in `Cargo.toml`. GitHub builds on Windows x64, qualifies the encoder
 built from the pinned source, then verifies setup, offline conversions, and
-uninstall. The draft points to the tested commit. Clear **Create a GitHub
+uninstall. The setup test uses the official MKVToolNix archive from the staging
+step, which Setup verifies again before extraction. The draft points to the
+tested commit. Clear **Create a GitHub
 release draft after verification** for a build and test run. Select
 **Refresh the existing unpublished draft for this version** to replace its
 assets after the new files pass verification. Publish from the draft after review.

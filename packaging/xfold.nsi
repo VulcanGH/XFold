@@ -70,10 +70,10 @@ Section "XFold"
     File /r "${PAYLOAD}\*"
     IfErrors copy_failed
 !ifdef MKVTOOLNIX_URL
-    DetailPrint "Downloading and checking MKVToolNix..."
+    DetailPrint "Preparing and checking MKVToolNix..."
     InitPluginsDir
     File /oname=$PLUGINSDIR\fetch-mkvtoolnix.ps1 "fetch-mkvtoolnix.ps1"
-    nsExec::ExecToStack '"$SYSDIR\WindowsPowerShell\v1.0\powershell.exe" -NoProfile -NonInteractive -ExecutionPolicy Bypass -File "$PLUGINSDIR\fetch-mkvtoolnix.ps1" -ArchiveUri "${MKVTOOLNIX_URL}" -Sha256 "${MKVTOOLNIX_SHA256}" -Destination "$INSTDIR\pending\tools\bin\mkvtoolnix"'
+    nsExec::ExecToStack '"$SYSDIR\WindowsPowerShell\v1.0\powershell.exe" -NoProfile -NonInteractive -ExecutionPolicy Bypass -File "$PLUGINSDIR\fetch-mkvtoolnix.ps1" -ArchiveUri "${MKVTOOLNIX_URL}" -Sha256 "${MKVTOOLNIX_SHA256}" -Destination "$INSTDIR\pending\tools\bin\mkvtoolnix" -LocalArchive "$EXEDIR\${MKVTOOLNIX_FILENAME}"'
     Pop $0
     Pop $1
     StrCmp $0 "0" 0 download_failed
@@ -107,7 +107,7 @@ Section "XFold"
     SetOutPath "$INSTDIR"
     RMDir /r "$INSTDIR\pending"
     DetailPrint "$1"
-    MessageBox MB_OK|MB_ICONSTOP "Setup could not install MKVToolNix. Check your internet connection and try again.$\r$\n$\r$\n$1" /SD IDOK
+    MessageBox MB_OK|MB_ICONSTOP "Setup could not install MKVToolNix. Check your connection, or download the official ${MKVTOOLNIX_FILENAME} to the folder containing Setup and retry.$\r$\n$\r$\n$1" /SD IDOK
     SetErrorLevel 14
     ${If} $0 >= 11
     ${AndIf} $0 <= 13

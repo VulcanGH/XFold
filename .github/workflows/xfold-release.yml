@@ -93,6 +93,10 @@ jobs:
       - name: Verify the installed app and offline conversions
         shell: pwsh
         run: |
+          $archive = python -c 'import tomllib; print(tomllib.load(open("tools/manifest.toml", "rb"))["tools"]["mkvtoolnix"]["url"].rsplit("/", 1)[1])'
+          if ($LASTEXITCODE -ne 0) { throw 'Could not determine the pinned source archive' }
+          # The staging step already fetched and verified the official archive.
+          Copy-Item -LiteralPath "tools/downloads/$archive" -Destination target/release-artifacts
           $setup = "target/release-artifacts/XFold-$env:XFOLD_VERSION-windows-x64-setup.exe"
           python scripts/test_installer.py $setup
           if ($LASTEXITCODE -ne 0) { throw 'Machine-wide install, conversion or uninstall test failed' }
