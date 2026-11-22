@@ -97,7 +97,8 @@ def verify(installer, previous):
     with tempfile.TemporaryDirectory(prefix="xfold-setup-test-") as temporary:
         work = Path(temporary)
         install_dir = work / "XFold x64"
-        assert setup(previous or installer, install_dir) == 0, "fresh setup failed"
+        result = setup(previous or installer, install_dir)
+        assert result == 0, f"fresh setup failed (exit {result})"
         exe = install_dir / "app/xfold.exe"
         if previous:
             print("Prior release installed:", subprocess.check_output([exe, "--version"], text=True).strip(), flush=True)
@@ -106,7 +107,8 @@ def verify(installer, previous):
             # installs the new complete payload instead of overlaying files.
             obsolete = install_dir / "app/obsolete-from-old-package"
             obsolete.write_text("test marker")
-            assert setup(installer, install_dir) == 0, "setup over existing install failed"
+            result = setup(installer, install_dir)
+            assert result == 0, f"setup over existing install failed (exit {result})"
             assert not obsolete.exists()
             assert key_exists(UNINSTALL_KEY) and key_exists(INSTALL_KEY), "missing machine-wide XFold registry entries"
             count = verify_files(install_dir / "app")

@@ -5,16 +5,22 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
-$ProgressPreference = 'SilentlyContinue'
-[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
 $archive = Join-Path $PSScriptRoot 'mkvtoolnix.7z'
 $tar = Join-Path $env:SystemRoot 'System32\tar.exe'
+$curl = Join-Path $env:SystemRoot 'System32\curl.exe'
+$failureCode = 11
 
 try {
-    Invoke-WebRequest -Uri $ArchiveUri -UseBasicParsing -TimeoutSec 180 -OutFile $archive
+    $curlOptions = @('--fail', '--location', '--silent', '--show-error', '--proto', '=https',
+        '--proto-redir', '=https', '--retry', '2', '--retry-max-time', '160', '--max-time', '80',
+        '--output', $archive, $ArchiveUri)
+    & $curl @curlOptions
+    if ($LASTEXITCODE -ne 0) { throw "The official MKVToolNix download failed (curl exit $LASTEXITCODE)." }
+    $failureCode = 12
     if ((Get-FileHash -LiteralPath $archive -Algorithm SHA256).Hash -ne $Sha256) {
         throw 'The official MKVToolNix download failed its SHA-256 check.'
     }
+    $failureCode = 13
     New-Item -ItemType Directory -Path $Destination -Force | Out-Null
     & $tar -xf $archive -C $Destination
     if ($LASTEXITCODE -ne 0) { throw 'Windows could not extract the MKVToolNix archive.' }
@@ -25,5 +31,5 @@ try {
     }
 } catch {
     [Console]::Error.WriteLine($_.Exception.Message)
-    exit 1
+    exit $failureCode
 }

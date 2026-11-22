@@ -40,10 +40,12 @@ Function .onInit
     Quit
   ${EndIf}
 !ifdef MKVTOOLNIX_URL
-  IfFileExists "$SYSDIR\tar.exe" +4
-  MessageBox MB_OK|MB_ICONSTOP "Setup requires the Windows tar tool. Use Windows 10 version 1809 or newer." /SD IDOK
-  SetErrorLevel 2
-  Quit
+  ${IfNot} ${FileExists} "$SYSDIR\tar.exe"
+  ${OrIfNot} ${FileExists} "$SYSDIR\curl.exe"
+    MessageBox MB_OK|MB_ICONSTOP "Setup requires the Windows curl and tar tools. Use Windows 10 version 1809 or newer." /SD IDOK
+    SetErrorLevel 10
+    Quit
+  ${EndIf}
 !endif
 FunctionEnd
 
@@ -71,8 +73,9 @@ Section "XFold"
     DetailPrint "Downloading and checking MKVToolNix..."
     InitPluginsDir
     File /oname=$PLUGINSDIR\fetch-mkvtoolnix.ps1 "fetch-mkvtoolnix.ps1"
-    nsExec::ExecToLog '"$SYSDIR\WindowsPowerShell\v1.0\powershell.exe" -NoProfile -NonInteractive -ExecutionPolicy Bypass -File "$PLUGINSDIR\fetch-mkvtoolnix.ps1" -ArchiveUri "${MKVTOOLNIX_URL}" -Sha256 "${MKVTOOLNIX_SHA256}" -Destination "$INSTDIR\pending\tools\bin\mkvtoolnix"'
+    nsExec::ExecToStack '"$SYSDIR\WindowsPowerShell\v1.0\powershell.exe" -NoProfile -NonInteractive -ExecutionPolicy Bypass -File "$PLUGINSDIR\fetch-mkvtoolnix.ps1" -ArchiveUri "${MKVTOOLNIX_URL}" -Sha256 "${MKVTOOLNIX_SHA256}" -Destination "$INSTDIR\pending\tools\bin\mkvtoolnix"'
     Pop $0
+    Pop $1
     StrCmp $0 "0" 0 download_failed
 !endif
     SetOutPath "$INSTDIR"
@@ -103,8 +106,13 @@ Section "XFold"
   download_failed:
     SetOutPath "$INSTDIR"
     RMDir /r "$INSTDIR\pending"
-    MessageBox MB_OK|MB_ICONSTOP "Setup could not download or verify MKVToolNix. Check your internet connection and try again." /SD IDOK
-    SetErrorLevel 2
+    DetailPrint "$1"
+    MessageBox MB_OK|MB_ICONSTOP "Setup could not install MKVToolNix. Check your internet connection and try again.$\r$\n$\r$\n$1" /SD IDOK
+    SetErrorLevel 14
+    ${If} $0 >= 11
+    ${AndIf} $0 <= 13
+      SetErrorLevel $0
+    ${EndIf}
     Quit
 !endif
 
