@@ -95,6 +95,10 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
+          $tag = "v$env:XFOLD_VERSION"
+          $existing = gh release list --repo $env:GITHUB_REPOSITORY --limit 1000 --json tagName --jq '.[].tagName'
+          if ($LASTEXITCODE -ne 0) { throw 'Could not check for an existing GitHub release' }
+          if ($tag -cin $existing) { throw "A draft or release already exists for $tag" }
           $prefix = "target/release-artifacts/XFold-$env:XFOLD_VERSION"
           $assets = @(
             "$prefix-windows-x64-setup.exe", "$prefix-windows-x64-setup.sha256",
@@ -103,5 +107,5 @@ jobs:
           foreach ($file in $assets) {
             if (-not (Test-Path -LiteralPath $file -PathType Leaf)) { throw "Missing release file: $file" }
           }
-          gh release create "v$env:XFOLD_VERSION" @assets --repo $env:GITHUB_REPOSITORY --target $env:GITHUB_SHA --draft --title "XFold $env:XFOLD_VERSION" --generate-notes
+          gh release create $tag @assets --repo $env:GITHUB_REPOSITORY --target $env:GITHUB_SHA --draft --title "XFold $env:XFOLD_VERSION" --generate-notes
           if ($LASTEXITCODE -ne 0) { throw 'Draft creation failed. Existing releases are preserved.' }

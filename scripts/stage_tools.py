@@ -104,7 +104,8 @@ def main():
         if not (rust / "cargo.exe").exists():
             if args.offline:
                 raise RuntimeError("Stage local Rust first: python scripts/portable_rust.py")
-            subprocess.run(["python", str(ROOT / "scripts/portable_rust.py")], check=True)
+            subprocess.run(["python", str(ROOT / "scripts/portable_rust.py"),
+                            "--evidence-dir", str(evidence)], check=True)
         w = MANIFEST["build"]["w64devkit"]
         archive = acquire(w["url"], w["sha256"], w["url"].rsplit("/", 1)[1], args.offline)
         if not (ROOT / "tools/build/w64devkit/bin/dlltool.exe").exists():
@@ -131,7 +132,9 @@ def main():
             print(build_log.read_text(encoding="utf-8", errors="replace")[-4000:], flush=True)
             result.check_returncode()
         output = Path(env["CARGO_TARGET_DIR"]) / MANIFEST["build"]["rust"]["target"] / "release/harlettizer.exe"
-        shutil.copy2(output, ROOT / "tools/bin/harlettizer/harlettizer.exe")
+        destination = ROOT / "tools/bin/harlettizer/harlettizer.exe"
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(output, destination)
         # This is the workspace's resolved dependency superset, including tools
         # and optional packages, not a claim that every entry is linked in the CLI.
         metadata_command = [str(rust / "cargo.exe"), "metadata", "--locked",
